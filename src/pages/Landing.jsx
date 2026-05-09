@@ -11,18 +11,20 @@ const SECTIONS = [
 ]
 
 const BACKERS = [
-  { name: 'Operators & Friends', href: 'http://www.operatorsandfriends.com', lead: true },
-  { name: 'NEA',                 href: 'https://www.nea.com/' },
-  { name: 'Transition',          href: 'https://transition.vc/' },
+  { name: 'Operators & Friends', href: 'http://www.operatorsandfriends.com', domain: 'operatorsandfriends.com', lead: true },
+  { name: 'NEA',                 href: 'https://www.nea.com/',               domain: 'nea.com' },
+  { name: 'Transition',          href: 'https://transition.vc/',             domain: 'transition.vc' },
 ]
 
 const POWERED = [
-  { name: 'ElevenLabs',      href: 'https://elevenlabs.io/' },
-  { name: 'OpenAI',          href: 'https://openai.com/' },
-  { name: 'Google DeepMind', href: 'https://deepmind.google/' },
-  { name: 'Encord',          href: 'https://encord.com/' },
-  { name: 'Lovable',         href: 'https://lovable.dev/?via=operatorsandfriends' },
+  { name: 'ElevenLabs',      href: 'https://elevenlabs.io/',                          domain: 'elevenlabs.io' },
+  { name: 'OpenAI',          href: 'https://openai.com/',                             domain: 'openai.com' },
+  { name: 'Google DeepMind', href: 'https://deepmind.google/',                        domain: 'deepmind.google' },
+  { name: 'Encord',          href: 'https://encord.com/',                             domain: 'encord.com' },
+  { name: 'Lovable',         href: 'https://lovable.dev/?via=operatorsandfriends',    domain: 'lovable.dev' },
 ]
+
+const logoSrc = (domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
 
 const FOUNDERS = [
   {
@@ -115,17 +117,26 @@ function TrustStrip() {
               with NEA &amp; Transition.
             </div>
           </div>
-          <div className="md:col-span-9 flex flex-wrap items-center gap-x-12 gap-y-5">
-            {BACKERS.map(({ name, href, lead }) => (
+          <div className="md:col-span-9 flex flex-wrap items-center gap-x-10 gap-y-5">
+            {BACKERS.map(({ name, href, domain, lead }) => (
               <a
                 key={name}
                 href={href}
                 target="_blank"
                 rel="noreferrer noopener"
-                className={`group relative font-display tracking-[-0.02em] text-text hover:text-cyan transition-colors
+                className={`group relative flex items-center gap-3 font-display tracking-[-0.02em] text-text hover:text-cyan transition-colors
                   ${lead ? 'text-[28px] md:text-[32px]' : 'text-[24px] md:text-[28px]'}`}
               >
-                {name}
+                <img
+                  src={logoSrc(domain)}
+                  alt=""
+                  width={32}
+                  height={32}
+                  loading="lazy"
+                  className={`rounded-sm grayscale group-hover:grayscale-0 transition-[filter] duration-200
+                    ${lead ? 'w-8 h-8' : 'w-7 h-7'}`}
+                />
+                <span>{name}</span>
                 <span className="absolute -bottom-1 left-0 right-0 h-px bg-cyan scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300" />
               </a>
             ))}
@@ -147,16 +158,24 @@ function TrustStrip() {
               shipping at the frontier.
             </div>
           </div>
-          <div className="md:col-span-9 flex flex-wrap items-center gap-x-10 gap-y-4">
-            {POWERED.map(({ name, href }) => (
+          <div className="md:col-span-9 flex flex-wrap items-center gap-x-8 gap-y-4">
+            {POWERED.map(({ name, href, domain }) => (
               <a
                 key={name}
                 href={href}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="group relative font-display text-[20px] md:text-[22px] tracking-[-0.015em] text-text-dim hover:text-text transition-colors"
+                className="group relative flex items-center gap-2.5 font-display text-[20px] md:text-[22px] tracking-[-0.015em] text-text-dim hover:text-text transition-colors"
               >
-                {name}
+                <img
+                  src={logoSrc(domain)}
+                  alt=""
+                  width={24}
+                  height={24}
+                  loading="lazy"
+                  className="w-6 h-6 rounded-sm grayscale group-hover:grayscale-0 transition-[filter] duration-200"
+                />
+                <span>{name}</span>
                 <span className="absolute -bottom-1 left-0 right-0 h-px bg-cyan scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300" />
               </a>
             ))}
@@ -282,12 +301,70 @@ export default function Landing() {
       </aside>
 
       {/* HERO — PROBLEM */}
-      <section id="problem" className="relative min-h-screen pt-32 pb-16 flex items-center overflow-hidden">
+      <section id="problem" className="relative min-h-screen pt-24 pb-16 flex items-center overflow-hidden">
         <div className="absolute inset-0 micro-grid opacity-60 pointer-events-none" />
         <div className="absolute -top-32 -right-20 w-[640px] h-[640px] rounded-full bg-cyan/8 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-40 -left-20 w-[520px] h-[520px] rounded-full bg-amber/10 blur-3xl pointer-events-none" />
 
         <div className="relative max-w-[1280px] mx-auto px-8 md:px-16 w-full">
+
+          {/* HERO TOP CREDITS RIBBON */}
+          <div className="mb-14 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center pb-6 border-b border-rule">
+            <div className="lg:col-span-5 flex items-center gap-3">
+              <span className="font-mono text-eyebrow text-text-muted whitespace-nowrap">SPONSORED BY</span>
+              <span className="h-px w-6 bg-rule" />
+              <div className="flex items-center gap-x-5 flex-wrap gap-y-2">
+                {BACKERS.map(({ name, href, domain }) => (
+                  <a
+                    key={name}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    title={name}
+                    className="group flex items-center gap-2 text-text-dim hover:text-text transition-colors"
+                  >
+                    <img
+                      src={logoSrc(domain)}
+                      alt=""
+                      width={20}
+                      height={20}
+                      loading="lazy"
+                      className="w-5 h-5 rounded-sm grayscale group-hover:grayscale-0 transition-[filter] duration-200"
+                    />
+                    <span className="font-display text-[14px] tracking-[-0.01em] whitespace-nowrap">{name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="lg:col-span-7 flex items-center gap-3 lg:justify-end">
+              <span className="font-mono text-eyebrow text-text-muted whitespace-nowrap">POWERED BY</span>
+              <span className="h-px w-6 bg-rule" />
+              <div className="flex items-center gap-x-5 flex-wrap gap-y-2">
+                {POWERED.map(({ name, href, domain }) => (
+                  <a
+                    key={name}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    title={name}
+                    className="group flex items-center gap-2 text-text-dim hover:text-text transition-colors"
+                  >
+                    <img
+                      src={logoSrc(domain)}
+                      alt=""
+                      width={18}
+                      height={18}
+                      loading="lazy"
+                      className="w-[18px] h-[18px] rounded-sm grayscale group-hover:grayscale-0 transition-[filter] duration-200"
+                    />
+                    <span className="font-display text-[13px] tracking-[-0.01em] whitespace-nowrap">{name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="font-mono text-eyebrow text-cyan mb-8 flex items-center gap-3">
             <span className="w-8 h-px bg-cyan" />
             01 · THE OPENING PUNCH
@@ -539,27 +616,49 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-10 border-b border-bg/15">
             <div>
               <div className="font-mono text-eyebrow text-cyan mb-3">BACKED BY</div>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-display text-[18px] tracking-[-0.02em]">
-                {BACKERS.map(({ name, href }, i) => (
-                  <span key={name} className="flex items-center gap-x-6">
-                    <a href={href} target="_blank" rel="noreferrer noopener" className="text-bg hover:text-cyan transition-colors">
-                      {name}
-                    </a>
-                    {i < BACKERS.length - 1 && <span className="text-bg/30">·</span>}
-                  </span>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 font-display text-[18px] tracking-[-0.02em]">
+                {BACKERS.map(({ name, href, domain }) => (
+                  <a
+                    key={name}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="group flex items-center gap-2 text-bg hover:text-cyan transition-colors"
+                  >
+                    <img
+                      src={logoSrc(domain)}
+                      alt=""
+                      width={22}
+                      height={22}
+                      loading="lazy"
+                      className="w-[22px] h-[22px] rounded-sm bg-bg/90 p-0.5 group-hover:scale-110 transition-transform"
+                    />
+                    <span>{name}</span>
+                  </a>
                 ))}
               </div>
             </div>
             <div>
               <div className="font-mono text-eyebrow text-cyan mb-3">POWERED BY</div>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-display text-[16px] tracking-[-0.015em]">
-                {POWERED.map(({ name, href }, i) => (
-                  <span key={name} className="flex items-center gap-x-5">
-                    <a href={href} target="_blank" rel="noreferrer noopener" className="text-bg/80 hover:text-cyan transition-colors">
-                      {name}
-                    </a>
-                    {i < POWERED.length - 1 && <span className="text-bg/30">·</span>}
-                  </span>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 font-display text-[15px] tracking-[-0.015em]">
+                {POWERED.map(({ name, href, domain }) => (
+                  <a
+                    key={name}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="group flex items-center gap-2 text-bg/80 hover:text-cyan transition-colors"
+                  >
+                    <img
+                      src={logoSrc(domain)}
+                      alt=""
+                      width={18}
+                      height={18}
+                      loading="lazy"
+                      className="w-[18px] h-[18px] rounded-sm bg-bg/90 p-0.5 group-hover:scale-110 transition-transform"
+                    />
+                    <span>{name}</span>
+                  </a>
                 ))}
               </div>
             </div>
