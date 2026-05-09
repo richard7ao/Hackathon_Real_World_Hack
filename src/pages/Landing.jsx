@@ -10,6 +10,20 @@ const SECTIONS = [
   { id: 'demo',     num: '06', label: 'Demo' },
 ]
 
+const BACKERS = [
+  { name: 'Operators & Friends', href: 'http://www.operatorsandfriends.com', lead: true },
+  { name: 'NEA',                 href: 'https://www.nea.com/' },
+  { name: 'Transition',          href: 'https://transition.vc/' },
+]
+
+const POWERED = [
+  { name: 'ElevenLabs',      href: 'https://elevenlabs.io/' },
+  { name: 'OpenAI',          href: 'https://openai.com/' },
+  { name: 'Google DeepMind', href: 'https://deepmind.google/' },
+  { name: 'Encord',          href: 'https://encord.com/' },
+  { name: 'Lovable',         href: 'https://lovable.dev/?via=operatorsandfriends' },
+]
+
 const FOUNDERS = [
   {
     name: 'Richard Lao',
@@ -83,6 +97,74 @@ function useReveal() {
     return () => io.disconnect()
   }, [])
   return [ref, shown]
+}
+
+function TrustStrip() {
+  return (
+    <section
+      aria-label="Backed by and powered by"
+      className="relative bg-bg border-y border-rule"
+    >
+      <div className="max-w-[1280px] mx-auto px-8 md:px-16 py-14">
+        {/* BACKED BY */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-10 items-center">
+          <div className="md:col-span-3">
+            <div className="font-mono text-eyebrow text-cyan mb-2">BACKED BY</div>
+            <div className="font-mono text-mono-xs text-text-muted leading-relaxed">
+              Sponsored by Operators &amp; Friends<br />
+              with NEA &amp; Transition.
+            </div>
+          </div>
+          <div className="md:col-span-9 flex flex-wrap items-center gap-x-12 gap-y-5">
+            {BACKERS.map(({ name, href, lead }) => (
+              <a
+                key={name}
+                href={href}
+                target="_blank"
+                rel="noreferrer noopener"
+                className={`group relative font-display tracking-[-0.02em] text-text hover:text-cyan transition-colors
+                  ${lead ? 'text-[28px] md:text-[32px]' : 'text-[24px] md:text-[28px]'}`}
+              >
+                {name}
+                <span className="absolute -bottom-1 left-0 right-0 h-px bg-cyan scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300" />
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* divider */}
+        <div className="my-10 grid grid-cols-12 gap-4 items-center">
+          <span className="col-span-3 font-mono text-eyebrow text-text-muted">— · —</span>
+          <span className="col-span-9 h-px bg-rule" />
+        </div>
+
+        {/* POWERED BY */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-10 items-center">
+          <div className="md:col-span-3">
+            <div className="font-mono text-eyebrow text-cyan mb-2">POWERED BY</div>
+            <div className="font-mono text-mono-xs text-text-muted leading-relaxed">
+              Built on the model and tooling stack
+              shipping at the frontier.
+            </div>
+          </div>
+          <div className="md:col-span-9 flex flex-wrap items-center gap-x-10 gap-y-4">
+            {POWERED.map(({ name, href }) => (
+              <a
+                key={name}
+                href={href}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="group relative font-display text-[20px] md:text-[22px] tracking-[-0.015em] text-text-dim hover:text-text transition-colors"
+              >
+                {name}
+                <span className="absolute -bottom-1 left-0 right-0 h-px bg-cyan scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300" />
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function Section({ id, eyebrow, num, children, tone = 'cream' }) {
@@ -250,6 +332,9 @@ export default function Landing() {
           </a>
         </div>
       </section>
+
+      {/* TRUST STRIP — backed by / powered by */}
+      <TrustStrip />
 
       {/* MARKET — costs */}
       <Section id="market" num="02" eyebrow="MARKET / COST OF POOR QUALITY" tone="cream">
@@ -450,7 +535,37 @@ export default function Landing() {
 
         {/* footer line */}
         <div className="relative mt-32 max-w-[1280px] mx-auto px-8 md:px-16">
-          <div className="border-t border-bg/15 pt-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-mono text-mono-xs text-bg/50">
+          {/* credits row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-10 border-b border-bg/15">
+            <div>
+              <div className="font-mono text-eyebrow text-cyan mb-3">BACKED BY</div>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-display text-[18px] tracking-[-0.02em]">
+                {BACKERS.map(({ name, href }, i) => (
+                  <span key={name} className="flex items-center gap-x-6">
+                    <a href={href} target="_blank" rel="noreferrer noopener" className="text-bg hover:text-cyan transition-colors">
+                      {name}
+                    </a>
+                    {i < BACKERS.length - 1 && <span className="text-bg/30">·</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="font-mono text-eyebrow text-cyan mb-3">POWERED BY</div>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-display text-[16px] tracking-[-0.015em]">
+                {POWERED.map(({ name, href }, i) => (
+                  <span key={name} className="flex items-center gap-x-5">
+                    <a href={href} target="_blank" rel="noreferrer noopener" className="text-bg/80 hover:text-cyan transition-colors">
+                      {name}
+                    </a>
+                    {i < POWERED.length - 1 && <span className="text-bg/30">·</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-mono text-mono-xs text-bg/50">
             <div>loopback · the autonomous AI process engineer · 2026</div>
             <div className="flex gap-6">
               <a href="#problem" className="hover:text-cyan">Top</a>
