@@ -336,7 +336,7 @@ export default function TheDefect() {
                 <div className="grid grid-cols-12 gap-8">
                   <div className="col-span-12 lg:col-span-7">
                     <h2 className="font-display text-h-sm tracking-[-0.025em]">
-                      From Apollo to advanced packaging.
+                      FMECA — NASA fault detection, applied to chip packaging.
                     </h2>
                     <p className="mt-4 text-text-dim font-light text-sm leading-relaxed">
                       FMECA — Failure Mode, Effects and Criticality Analysis — was formalised in MIL-P-1629 in 1949 and adopted
