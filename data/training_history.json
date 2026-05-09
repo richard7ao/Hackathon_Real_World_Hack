@@ -1,0 +1,322 @@
+[
+  {
+    "epoch": 1,
+    "train_acc": 0.45,
+    "val_acc": 0.95,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 1.0
+    }
+  },
+  {
+    "epoch": 2,
+    "train_acc": 0.8,
+    "val_acc": 0.95,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 1.0
+    }
+  },
+  {
+    "epoch": 3,
+    "train_acc": 0.65,
+    "val_acc": 0.95,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 1.0
+    }
+  },
+  {
+    "epoch": 4,
+    "train_acc": 0.725,
+    "val_acc": 0.95,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 1.0
+    }
+  },
+  {
+    "epoch": 5,
+    "train_acc": 0.875,
+    "val_acc": 0.95,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 1.0
+    }
+  },
+  {
+    "epoch": 6,
+    "train_acc": 0.9125,
+    "val_acc": 0.95,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 1.0
+    }
+  },
+  {
+    "epoch": 7,
+    "train_acc": 0.95,
+    "val_acc": 0.95,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 1.0
+    }
+  },
+  {
+    "epoch": 8,
+    "train_acc": 0.875,
+    "val_acc": 0.95,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 1.0
+    }
+  },
+  {
+    "epoch": 9,
+    "train_acc": 0.8875,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 10,
+    "train_acc": 0.9375,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 11,
+    "train_acc": 0.875,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 12,
+    "train_acc": 0.9125,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 13,
+    "train_acc": 0.9375,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 14,
+    "train_acc": 0.95,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 15,
+    "train_acc": 0.975,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 16,
+    "train_acc": 0.9625,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 17,
+    "train_acc": 0.9625,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 18,
+    "train_acc": 0.9625,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 19,
+    "train_acc": 0.975,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  },
+  {
+    "epoch": 20,
+    "train_acc": 0.975,
+    "val_acc": 0.9,
+    "per_class_acc": {
+      "center": 0.0,
+      "donut": 0.0,
+      "edge-loc": 0.0,
+      "edge-ring": 0.0,
+      "loc": 0.0,
+      "random": 0.0,
+      "scratch": 0.0,
+      "near-full": 0.0,
+      "none": 0.947
+    }
+  }
+]

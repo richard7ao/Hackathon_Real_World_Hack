@@ -6,8 +6,7 @@ Strategy:
    and mutate its :class:`OntologyStructure` in place: add a "Defect Pattern"
    radio classification with the nine canonical option ``value`` strings, plus
    an optional "Annotator Confidence" radio classification.
-2. Persist with ``ontology.save`` (Encord exposes ``save`` as a property that
-   triggers the PUT — yes, no parentheses).
+2. Persist with ``ontology.save()`` (PUT to ``/v2/public/ontologies/{hash}``).
 3. If the existing ontology already has the nine values, this is a no-op.
 
 Run with ``--create-new`` to instead create a fresh ontology (useful when the
@@ -115,7 +114,7 @@ def update_existing(project_id: str) -> None:
             f"{CONFIDENCE_OPTIONS}."
         )
 
-    ontology.save  # property triggers PUT
+    ontology.save()
     print(f"Saved ontology {ontology.ontology_hash}.")
 
 

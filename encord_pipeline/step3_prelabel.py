@@ -207,11 +207,60 @@ def _resolve_option(classification: Classification, pattern: str) -> Option:
     )
 
 
-def _write_prelabel(label_row, pattern: str, confidence: float) -> bool:
+def _wipe_row_classifications(project, label_hash: str) -> None:
+    """Remove every classification from a label row via the legacy save_label_row.
+
+    The hackathon project carries orphan classifications written by an earlier
+    buggy pre-label run referencing a since-replaced ontology feature hash. The
+    LabelRowV2 parser refuses to load them at all, so we cannot use the modern
+    ``label_row.remove_classification`` path. We fetch the raw labels dict,
+    drop every classification, then PUT it back.
+    """
     try:
+        raw = project.get_label_row(label_hash, get_signed_url=False)
+    except Exception as exc:
+        print(f"    could not fetch raw label row: {exc}")
+        return
+
+    changed = False
+    for du in raw.get("data_units", {}).values():
+        labels = du.get("labels", {})
+        if labels.get("classifications"):
+            labels["classifications"] = []
+            changed = True
+    if raw.get("classification_answers"):
+        raw["classification_answers"] = {}
+        changed = True
+
+    if not changed:
+        return
+    try:
+        project.save_label_row(label_hash, raw)
+    except Exception as exc:
+        print(f"    could not save cleaned label row: {exc}")
+
+
+def _safe_initialise(label_row, *, overwrite: bool = False) -> None:
+    try:
+        label_row.initialise_labels(overwrite=overwrite)
+    except TypeError:
         label_row.initialise_labels()
+
+
+def _write_prelabel(project, label_row, pattern: str, confidence: float) -> bool:
+    try:
+        try:
+            _safe_initialise(label_row)
+        except Exception:
+            _wipe_row_classifications(project, label_row.label_hash)
+            _safe_initialise(label_row, overwrite=True)
+
         classification = _resolve_classification(label_row)
         option = _resolve_option(classification, pattern)
+
+        if label_row.get_classification_instances():
+            _wipe_row_classifications(project, label_row.label_hash)
+            _safe_initialise(label_row, overwrite=True)
 
         instance = classification.create_instance()
         instance.set_answer(answer=option)
@@ -297,7 +346,7 @@ def main() -> None:
             if label_row is None:
                 msg = "label row missing"
             else:
-                wrote = _write_prelabel(label_row, result.defect_pattern, result.confidence)
+                wrote = _write_prelabel(project, label_row, result.defect_pattern, result.confidence)
                 msg = "saved" if wrote else "write failed"
 
             print(

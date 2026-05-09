@@ -51,11 +51,7 @@ def _extract_answers(label_row) -> tuple[str, str | None]:
     annotator_confidence: str | None = None
 
     for instance in label_row.get_classification_instances():
-        cls = instance.classification
-        attrs = cls.attributes if cls else []
-        if not attrs:
-            continue
-        attribute_name = (attrs[0].name or "").strip().lower()
+        attribute_name = (instance.classification_name or "").strip().lower()
 
         try:
             answer = instance.get_answer()
@@ -91,6 +87,12 @@ def main() -> None:
                 skipped += 1
                 continue
 
+            try:
+                node = label_row.workflow_graph_node
+                stage = node.title if node else "<no-stage>"
+            except Exception:
+                stage = "<unknown>"
+
             rows.append(
                 {
                     "filename": label_row.data_title,
@@ -98,7 +100,7 @@ def main() -> None:
                     "annotator_confidence": annotator_confidence,
                     "label_hash": label_row.label_hash,
                     "data_hash": label_row.data_hash,
-                    "status": str(label_row.annotation_task_status),
+                    "status": stage,
                     "local_path": _local_image_path(
                         label_row.label_hash, label_row.data_title
                     ),

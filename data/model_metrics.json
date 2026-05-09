@@ -1,0 +1,32 @@
+{
+  "model": "ResNet18 fine-tuned (layer4 + fc)",
+  "dataset": "WM-811K curated subset",
+  "labels_generated_by": "gemini-3.1-flash-lite",
+  "annotation_platform": "Encord",
+  "best_val_accuracy": 0.95,
+  "best_epoch": 1,
+  "per_class_accuracy": {
+    "center": 0.0,
+    "donut": 0.0,
+    "edge-loc": 0.0,
+    "edge-ring": 0.0,
+    "loc": 0.0,
+    "random": 0.0,
+    "scratch": 0.0,
+    "near-full": 0.0,
+    "none": 1.0
+  },
+  "architecture": "ResNet18",
+  "image_size": 224,
+  "classes": [
+    "center",
+    "donut",
+    "edge-loc",
+    "edge-ring",
+    "loc",
+    "random",
+    "scratch",
+    "near-full",
+    "none"
+  ]
+}

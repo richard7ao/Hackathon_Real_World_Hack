@@ -39,8 +39,14 @@ PATTERN_HUMAN_LABELS = {
 
 CONFIDENCE_OPTIONS = ["certain", "likely", "unsure"]
 
-GEMINI_MODEL_PRIMARY = "gemini-2.5-flash"
-GEMINI_MODEL_FALLBACKS = ["gemini-2.0-flash", "gemini-1.5-flash"]
+GEMINI_MODEL_PRIMARY = "gemini-3.1-flash-lite"
+GEMINI_MODEL_FALLBACKS = [
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3-flash-preview",
+    "gemini-flash-latest",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data"

@@ -7,11 +7,177 @@
   },
   "ontology": {
     "objects": [],
-    "classifications": [],
+    "classifications": [
+      {
+        "id": "1",
+        "featureNodeHash": "63d01b50",
+        "attributes": [
+          {
+            "id": "1.1",
+            "name": "Defect Pattern",
+            "type": "radio",
+            "featureNodeHash": "TUoR3C1R",
+            "required": true,
+            "archived": false,
+            "dynamic": false,
+            "options": [
+              {
+                "id": "1.1.1",
+                "label": "Center \u2014 cluster in wafer centre",
+                "value": "center",
+                "featureNodeHash": "w4LRHiH2",
+                "archived": false
+              },
+              {
+                "id": "1.1.2",
+                "label": "Donut \u2014 ring inside wafer",
+                "value": "donut",
+                "featureNodeHash": "4o91Yi5J",
+                "archived": false
+              },
+              {
+                "id": "1.1.3",
+                "label": "Edge-Loc \u2014 localised spot at edge",
+                "value": "edge-loc",
+                "featureNodeHash": "Od0W/FkC",
+                "archived": false
+              },
+              {
+                "id": "1.1.4",
+                "label": "Edge-Ring \u2014 ring around wafer edge",
+                "value": "edge-ring",
+                "featureNodeHash": "KsuX7qvP",
+                "archived": false
+              },
+              {
+                "id": "1.1.5",
+                "label": "Loc \u2014 localised cluster",
+                "value": "loc",
+                "featureNodeHash": "7E+arnTk",
+                "archived": false
+              },
+              {
+                "id": "1.1.6",
+                "label": "Random \u2014 no spatial pattern",
+                "value": "random",
+                "featureNodeHash": "pwKqIGrq",
+                "archived": false
+              },
+              {
+                "id": "1.1.7",
+                "label": "Scratch \u2014 linear or arc pattern",
+                "value": "scratch",
+                "featureNodeHash": "tqO1G/pb",
+                "archived": false
+              },
+              {
+                "id": "1.1.8",
+                "label": "Near-Full \u2014 majority of wafer failing",
+                "value": "near-full",
+                "featureNodeHash": "AM0PC2fa",
+                "archived": false
+              },
+              {
+                "id": "1.1.9",
+                "label": "None \u2014 clean wafer",
+                "value": "none",
+                "featureNodeHash": "0CrNnJ4E",
+                "archived": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "featureNodeHash": "0da89b50",
+        "attributes": [
+          {
+            "id": "2.1",
+            "name": "Annotator Confidence",
+            "type": "radio",
+            "featureNodeHash": "v/iweR/6",
+            "required": false,
+            "archived": false,
+            "dynamic": false,
+            "options": [
+              {
+                "id": "2.1.1",
+                "label": "Certain",
+                "value": "certain",
+                "featureNodeHash": "0zMChQcs",
+                "archived": false
+              },
+              {
+                "id": "2.1.2",
+                "label": "Likely",
+                "value": "likely",
+                "featureNodeHash": "/7YeFtMI",
+                "archived": false
+              },
+              {
+                "id": "2.1.3",
+                "label": "Unsure",
+                "value": "unsure",
+                "featureNodeHash": "z3to54TV",
+                "archived": false
+              }
+            ]
+          }
+        ]
+      }
+    ],
     "skeleton_templates": []
   },
-  "ontology_summary": [],
-  "ontology_gate_ok": false,
+  "ontology_summary": [
+    {
+      "classification_uid": "1",
+      "feature_node_hash": "63d01b50",
+      "attribute_name": "Defect Pattern",
+      "attribute_type": "radio",
+      "required": true,
+      "option_values": [
+        "center",
+        "donut",
+        "edge-loc",
+        "edge-ring",
+        "loc",
+        "random",
+        "scratch",
+        "near-full",
+        "none"
+      ],
+      "option_labels": [
+        "Center \u2014 cluster in wafer centre",
+        "Donut \u2014 ring inside wafer",
+        "Edge-Loc \u2014 localised spot at edge",
+        "Edge-Ring \u2014 ring around wafer edge",
+        "Loc \u2014 localised cluster",
+        "Random \u2014 no spatial pattern",
+        "Scratch \u2014 linear or arc pattern",
+        "Near-Full \u2014 majority of wafer failing",
+        "None \u2014 clean wafer"
+      ]
+    },
+    {
+      "classification_uid": "2",
+      "feature_node_hash": "0da89b50",
+      "attribute_name": "Annotator Confidence",
+      "attribute_type": "radio",
+      "required": false,
+      "option_values": [
+        "certain",
+        "likely",
+        "unsure"
+      ],
+      "option_labels": [
+        "Certain",
+        "Likely",
+        "Unsure"
+      ]
+    }
+  ],
+  "ontology_gate_ok": true,
   "missing_pattern_values": [],
   "sample_rows": [
     {

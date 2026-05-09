@@ -27,6 +27,17 @@ REQUEST_TIMEOUT = 30
 MAX_RETRIES = 3
 
 
+def _row_stage(row) -> str:
+    try:
+        node = row.workflow_graph_node
+        return node.title if node else "<no-stage>"
+    except Exception:
+        try:
+            return str(row.annotation_task_status)
+        except Exception:
+            return "<unknown>"
+
+
 def _safe_filename(label_hash: str, data_title: str) -> str:
     base = (data_title or "untitled").replace("/", "_").replace(" ", "_")
     return f"{label_hash[:8]}_{base}"
@@ -99,7 +110,7 @@ def main() -> None:
                     "data_hash": label_row.data_hash,
                     "data_title": title,
                     "local_path": str(local_path),
-                    "status": str(label_row.annotation_task_status),
+                    "status": _row_stage(label_row),
                     "error": None,
                 }
             )
@@ -112,7 +123,7 @@ def main() -> None:
                     "data_hash": getattr(label_row, "data_hash", None),
                     "data_title": title,
                     "local_path": None,
-                    "status": str(label_row.annotation_task_status),
+                    "status": _row_stage(label_row),
                     "error": str(exc),
                 }
             )
