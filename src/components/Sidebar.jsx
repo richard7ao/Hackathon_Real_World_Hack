@@ -1,75 +1,104 @@
-import { useNavigate, useLocation } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 
-const NAV_ITEMS = [
-  { label: 'Fleet',   icon: 'precision_manufacturing', key: 'fleet',   path: '/' },
-  { label: 'Thermal', icon: 'thermostat',              key: 'thermal', path: '/fix' },
-  { label: 'Vacuum',  icon: 'vibration',               key: 'vacuum',  path: '/' },
-  { label: 'Logs',    icon: 'database',                key: 'logs',    path: '/defect' },
+const NAV = [
+  { label: 'PIPELINE',   sub: 'fleet · 8-stage line', icon: 'precision_manufacturing', path: '/',       index: '01' },
+  { label: 'DEFECT',     sub: 'analysis · A247293C3', icon: 'biotech',                 path: '/defect', index: '02' },
+  { label: 'RESOLUTION', sub: 'fix · RPN 187 → 42',   icon: 'auto_fix_high',           path: '/fix',    index: '03' },
 ]
 
-export default function Sidebar({ active, onNewAnalysis }) {
+const META = [
+  ['UPTIME',  '413:21:08'],
+  ['NODES',   '1,024 / 1,024'],
+  ['REGION',  'TPE-N3 · A42'],
+  ['BUILD',   'v2.4.1 · stable'],
+]
+
+export default function Sidebar() {
   const navigate = useNavigate()
-  const { pathname } = useLocation()
 
   return (
-    <aside
-      className="bg-surface-container-low w-64 border-r border-outline-variant flex flex-col h-full py-panel-padding z-40 flex-shrink-0"
-      aria-label="Side navigation"
-    >
-      <div className="px-6 mb-8 flex items-center gap-4">
-        <div
-          className="w-10 h-10 rounded bg-surface-variant border border-outline-variant flex items-center justify-center"
-          aria-hidden="true"
-        >
-          <span className="material-symbols-outlined text-primary-fixed">engineering</span>
-        </div>
-        <div>
-          <div className="font-data-sm text-data-sm uppercase text-primary-fixed tracking-wider">
-            OPERATOR_01
+    <aside className="w-72 shrink-0 border-r border-rule bg-bg/70 backdrop-blur flex flex-col h-full">
+      <div className="px-6 pt-6 pb-5 border-b border-rule">
+        <div className="flex items-center gap-3">
+          <div className="relative w-10 h-10 grid place-items-center bg-cyan/10 hairline">
+            <span className="font-mono text-cyan text-[18px] leading-none">◐</span>
           </div>
-          <div className="font-label-caps text-label-caps text-on-surface-variant">
-            CoWoS-STATION-A42
+          <div className="leading-tight">
+            <div className="font-display text-[20px] tracking-[-0.03em] leading-none">loopback</div>
+            <div className="font-mono text-mono-xs text-text-muted mt-1.5">operator_01 · A42</div>
           </div>
         </div>
       </div>
 
-      <nav aria-label="Section navigation" className="flex-1 flex flex-col gap-1 px-4">
-        {NAV_ITEMS.map(({ label, icon, key, path }) => {
-          const isActive = active === key
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => navigate(path)}
-              aria-current={isActive ? 'page' : undefined}
-              className={`flex items-center gap-3 px-4 py-3 w-full text-left transition-all duration-200 font-data-sm text-data-sm uppercase tracking-wider cursor-pointer ${
-                isActive
-                  ? 'bg-primary-container text-on-primary-container font-bold border-l-4 border-primary'
-                  : 'text-on-surface-variant hover:bg-surface-bright border-l-4 border-transparent'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm" aria-hidden="true">{icon}</span>
-              {label}
-            </button>
-          )
-        })}
+      <nav className="flex-1 overflow-y-auto scrollbar-thin py-3" aria-label="Primary">
+        <div className="px-6 mb-3 flex items-center justify-between">
+          <span className="font-mono text-eyebrow text-text-muted">SURFACES</span>
+          <span className="font-mono text-eyebrow text-text-muted">{NAV.length}</span>
+        </div>
+        <ul className="px-3 flex flex-col gap-1">
+          {NAV.map(({ label, sub, icon, path, index }) => (
+            <li key={path}>
+              <NavLink
+                to={path}
+                end={path === '/'}
+                className={({ isActive }) =>
+                  `group relative flex items-start gap-3 px-3 py-3 transition-all duration-200
+                   ${isActive
+                    ? 'bg-surface text-text shadow-sm'
+                    : 'text-text-dim hover:bg-surface/60 hover:text-text'}`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={`absolute left-0 top-3 bottom-3 w-px transition-all duration-300
+                        ${isActive ? 'bg-cyan' : 'bg-transparent group-hover:bg-rule'}`}
+                    />
+                    <span className="font-mono text-mono-xs text-text-muted w-6 mt-1 tabular-nums">{index}</span>
+                    <span className={`material-symbols-outlined text-[18px] mt-0.5 ${isActive ? 'text-cyan' : ''}`}>
+                      {icon}
+                    </span>
+                    <span className="flex-1 leading-tight">
+                      <span className="block font-display text-[15px] tracking-[-0.01em]">{label}</span>
+                      <span className="block font-mono text-mono-xs text-text-muted mt-1">{sub}</span>
+                    </span>
+                    {isActive && <span className="material-symbols-outlined text-cyan text-[16px] mt-1">arrow_outward</span>}
+                  </>
+                )}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-8 mx-6 pt-5 border-t border-rule">
+          <div className="font-mono text-eyebrow text-text-muted mb-3">TELEMETRY</div>
+          <dl className="space-y-2.5">
+            {META.map(([k, v]) => (
+              <div key={k} className="flex items-baseline justify-between gap-3">
+                <dt className="font-mono text-mono-xs text-text-muted">{k}</dt>
+                <dd className="font-mono text-mono-xs text-text tabular-nums">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </nav>
 
-      <div className="px-6 mt-auto">
+      <div className="p-5 border-t border-rule">
         <button
-          type="button"
-          onClick={onNewAnalysis}
-          className="w-full py-2 border border-secondary text-secondary font-data-sm text-data-sm uppercase tracking-wider hover:bg-secondary hover:text-on-secondary transition-colors duration-200 mb-6 cursor-pointer"
+          onClick={() => navigate('/defect')}
+          className="group relative w-full bg-cyan text-white font-display text-[14px] tracking-[-0.005em] py-3 px-4
+                     flex items-center justify-between hover:bg-cyan-deep transition-colors"
         >
-          New Analysis
+          <span>New analysis</span>
+          <span className="font-mono text-mono-xs">↗</span>
         </button>
-        <div className="flex gap-2">
-          <button type="button" aria-label="Help and support" className="p-1 text-on-surface-variant hover:text-primary cursor-pointer transition-colors duration-200 rounded">
-            <span className="material-symbols-outlined" aria-hidden="true">help</span>
-          </button>
-          <button type="button" aria-label="API documentation" className="p-1 text-on-surface-variant hover:text-primary cursor-pointer transition-colors duration-200 rounded">
-            <span className="material-symbols-outlined" aria-hidden="true">code</span>
-          </button>
+        <div className="flex items-center justify-between mt-4 px-1">
+          <div className="flex gap-3 text-text-muted">
+            <button className="material-symbols-outlined text-[18px] hover:text-cyan" aria-label="Help">help</button>
+            <button className="material-symbols-outlined text-[18px] hover:text-cyan" aria-label="Terminal">terminal</button>
+            <button className="material-symbols-outlined text-[18px] hover:text-cyan" aria-label="Settings">settings</button>
+          </div>
+          <span className="font-mono text-eyebrow text-text-muted">© 2026</span>
         </div>
       </div>
     </aside>

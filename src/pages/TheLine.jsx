@@ -1,223 +1,293 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import DiagnosticModal from '../components/DiagnosticModal'
 
 const STAGES = [
-  { id: 'STG-01', label: 'WAFER_IN',    icon: 'conveyor_belt', status: 'ok',    pos: 'down' },
-  { id: 'STG-02', label: 'BUMPING',     icon: 'scatter_plot',  status: 'ok',    pos: 'up'   },
-  { id: 'STG-03', label: 'INTERPOSER',  icon: 'layers',        status: 'ok',    pos: 'down' },
-  { id: 'STG-04', label: 'COW_BONDING', icon: 'join_inner',    status: 'error', pos: 'up'   },
-  { id: 'STG-05', label: 'UNDERFILL',   icon: 'water_drop',    status: 'ok',    pos: 'down' },
-  { id: 'STG-06', label: 'WOS_ATTACH',  icon: 'memory',        status: 'ok',    pos: 'up'   },
-  { id: 'STG-07', label: 'REFLOW',      icon: 'mode_heat',     status: 'ok',    pos: 'down' },
-  { id: 'STG-08', label: 'FINAL_TEST',  icon: 'fact_check',    status: 'ok',    pos: 'up'   },
+  { id: 'STG-01', label: 'WAFER_IN',    icon: 'conveyor_belt', status: 'ok',    yield: 98.1 },
+  { id: 'STG-02', label: 'BUMPING',     icon: 'scatter_plot',  status: 'ok',    yield: 97.4 },
+  { id: 'STG-03', label: 'INTERPOSER',  icon: 'layers',        status: 'ok',    yield: 96.8 },
+  { id: 'STG-04', label: 'COW_BONDING', icon: 'join_inner',    status: 'error', yield: 84.2 },
+  { id: 'STG-05', label: 'UNDERFILL',   icon: 'water_drop',    status: 'ok',    yield: 96.1 },
+  { id: 'STG-06', label: 'WOS_ATTACH',  icon: 'memory',        status: 'ok',    yield: 95.5 },
+  { id: 'STG-07', label: 'REFLOW',      icon: 'mode_heat',     status: 'warn',  yield: 95.1 },
+  { id: 'STG-08', label: 'FINAL_TEST',  icon: 'fact_check',    status: 'ok',    yield: 97.0 },
 ]
 
-const TERMINAL_MSGS = {
+const TERMINAL = {
   'STG-04': [
-    { type: 'cmd', text: 'Connecting to ERP...' },
-    { type: 'ok',  text: 'success' },
-    { type: 'cmd', text: 'Reading thermal data logs...' },
-    { type: 'err', text: 'WARN: Temp anomaly detected at zone 4' },
-    { type: 'sub', text: 'Delta: +2.4°C / Threshold: 1.5°C' },
-    { type: 'ai',  text: 'Initiating auto-calibration for heater block B. ETA: 45s.' },
+    { type: 'cmd',  text: 'connecting · erp.coWoS.local' },
+    { type: 'ok',   text: 'handshake ✓ — auth via mTLS' },
+    { type: 'cmd',  text: 'reading thermal logs / zone-4' },
+    { type: 'err',  text: 'WARN · temp anomaly @ heater_block_B' },
+    { type: 'sub',  text: 'Δ +2.4°C  threshold ±1.5°C  duration 38s' },
+    { type: 'ai',   text: 'Hugo: auto-calibration queued · ETA 45s' },
+  ],
+  'STG-07': [
+    { type: 'cmd',  text: 'reflow profile · sampling 200ms' },
+    { type: 'warn', text: 'temp variation ±0.8°C — monitor' },
+    { type: 'sub',  text: 'within tolerance — soft warning only' },
   ],
   default: [
-    { type: 'cmd', text: 'Connecting to ERP...' },
-    { type: 'ok',  text: 'success' },
-    { type: 'cmd', text: 'Running stage diagnostics...' },
-    { type: 'ok',  text: 'STATUS: All parameters within normal range' },
-    { type: 'sub', text: 'Throughput: 99.1% / Defect rate: 0.04%' },
-    { type: 'ai',  text: 'No action required. Stage operating nominally.' },
+    { type: 'cmd', text: 'stage diagnostic · all parameters nominal' },
+    { type: 'ok',  text: 'throughput 99.1% · defect rate 0.04%' },
+    { type: 'ai',  text: 'Hugo: no action required' },
   ],
 }
 
-function useFleetStats() {
-  const [yieldPct, setYieldPct] = useState(94.2)
-  useEffect(() => {
-    const id = setInterval(() => {
-      setYieldPct(y => Math.min(99.9, Math.max(90, +(y + (Math.random() - 0.52) * 0.08).toFixed(1))))
-    }, 3000)
-    return () => clearInterval(id)
-  }, [])
-  return yieldPct
+const TERM_COLOR = {
+  cmd: 'text-text-dim', ok: 'text-ok', err: 'text-danger',
+  warn: 'text-amber',   sub: 'text-text-muted', ai: 'text-cyan',
 }
 
-function TerminalLine({ type, text }) {
-  const cls =
-    type === 'err' ? 'text-error' :
-    type === 'ok'  ? 'text-primary-fixed' :
-    type === 'ai'  ? 'text-secondary' :
-    type === 'sub' ? 'text-on-surface-variant pl-4 border-l-2 border-error ml-1' :
-    'text-on-surface'
+function useFleet() {
+  const [y, setY] = useState(94.2)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setY(v => +Math.min(99.9, Math.max(90, v + (Math.random() - 0.52) * 0.08)).toFixed(1))
+    }, 2400)
+    return () => clearInterval(id)
+  }, [])
+  return y
+}
+
+function StageNode({ stage, isSelected, onClick, idx }) {
+  const isError = stage.status === 'error'
+  const isWarn  = stage.status === 'warn'
+
   return (
-    <div className={`flex gap-2 text-xs ${cls}`}>
-      {type !== 'sub' && <span className="text-secondary shrink-0" aria-hidden="true">&gt;</span>}
-      <span>{text}</span>
-    </div>
+    <button
+      onClick={onClick}
+      aria-pressed={isSelected}
+      className={`group relative flex flex-col gap-2 text-left p-4 transition-all duration-200 hairline bg-surface
+        ${isSelected ? '!border-cyan shadow-md' : 'hover:hairline-strong hover:shadow-sm'}
+        ${isError ? '!border-danger' : ''}`}
+    >
+      {isError && <span className="absolute -top-1 -right-1 w-2 h-2 bg-danger animate-ping2" />}
+      {isError && <span className="absolute -top-1 -right-1 w-2 h-2 bg-danger" />}
+
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-eyebrow text-text-muted">{idx}</span>
+        <span className={`font-mono text-eyebrow tabular-nums
+          ${isError ? 'text-danger' : isWarn ? 'text-amber' : 'text-text-muted'}`}>
+          {stage.id}
+        </span>
+      </div>
+
+      <span className={`material-symbols-outlined text-[24px]
+        ${isError ? 'text-danger' : isWarn ? 'text-amber' : 'text-text-dim group-hover:text-cyan'}`}
+        aria-hidden="true">
+        {stage.icon}
+      </span>
+
+      <div className="font-display text-[15px] tracking-[-0.015em] leading-tight">
+        {stage.label.toLowerCase().replace('_', ' ')}
+      </div>
+
+      <div className="mt-1 flex items-baseline justify-between">
+        <span className="font-mono text-mono-xs tabular-nums text-text-dim">
+          {stage.yield.toFixed(1)}<span className="text-text-muted">%</span>
+        </span>
+        <span className={`font-mono text-eyebrow uppercase
+          ${isError ? 'text-danger' : isWarn ? 'text-amber' : 'text-ok'}`}>
+          {isError ? 'critical' : isWarn ? 'warning' : 'nominal'}
+        </span>
+      </div>
+
+      <div className="h-px w-full bg-rule overflow-hidden">
+        <div
+          className={`h-full transition-all duration-700
+            ${isError ? 'bg-danger' : isWarn ? 'bg-amber' : 'bg-ok'}`}
+          style={{ width: `${stage.yield}%` }}
+        />
+      </div>
+    </button>
   )
 }
 
 export default function TheLine() {
   const navigate = useNavigate()
-  const [selectedStage, setSelectedStage] = useState('STG-04')
+  const [selected, setSelected] = useState('STG-04')
   const [showModal, setShowModal] = useState(false)
-  const yieldPct = useFleetStats()
-
-  const msgs = TERMINAL_MSGS[selectedStage] || TERMINAL_MSGS.default
-  const selected = STAGES.find(s => s.id === selectedStage)
-
-  const handleStageKey = (e, stage) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      setSelectedStage(stage.id)
-    }
-  }
+  const fleetYield = useFleet()
+  const stage = STAGES.find(s => s.id === selected)
+  const term = TERMINAL[selected] ?? TERMINAL.default
+  const errorCount = STAGES.filter(s => s.status === 'error').length
+  const warnCount  = STAGES.filter(s => s.status === 'warn').length
 
   return (
-    <div className="bg-background text-on-surface font-body-md overflow-x-hidden min-h-screen flex flex-col">
+    <div className="min-h-screen bg-bg text-text font-sans">
       <TopBar onDiagnostic={() => setShowModal(true)} />
 
-      <div className="flex flex-1 mt-16 h-[calc(100vh-64px)] overflow-hidden">
-        <Sidebar active="fleet" onNewAnalysis={() => navigate('/defect')} />
+      <div className="flex pt-16 h-screen">
+        <Sidebar />
 
-        <main id="main-content" className="flex-1 relative overflow-auto p-8 bg-technical-grid bg-grid">
+        <main className="flex-1 overflow-y-auto scrollbar-thin relative micro-grid">
+          <div className="max-w-[1480px] mx-auto px-10 py-12">
 
-          {/* Fleet Status Panel */}
-          <div
-            className="absolute top-8 right-8 bg-glass border border-outline-variant p-4 w-64 z-20"
-            aria-label="Fleet status summary"
-          >
-            <div className="font-label-caps text-label-caps text-on-surface-variant mb-2">SYS-FLT-STS</div>
-            <div className="flex items-end gap-2 mb-4">
-              <span className="font-headline-lg text-headline-lg text-primary" aria-label={`${yieldPct}% yield`}>
-                {yieldPct}%
+            <header className="grid grid-cols-12 gap-8 mb-12">
+              <div className="col-span-12 lg:col-span-8">
+                <div className="font-mono text-eyebrow text-cyan mb-6 flex items-center gap-3">
+                  <span className="w-8 h-px bg-cyan" />
+                  LIVE · 2026.05.09
+                </div>
+                <h1 className="font-display text-h-lg text-balance leading-[0.9]">
+                  Eight stages.<br />
+                  <span className="text-text-muted">One </span>
+                  <span className="italic text-cyan">silent</span>
+                  <span className="text-text-muted"> defect.</span>
+                </h1>
+                <p className="mt-6 max-w-xl text-text-dim text-lead font-light">
+                  Every wafer through CoWoS-Station-A42 lands here.
+                  Hugo correlates 1.4M telemetry points / sec to surface failure
+                  modes before yield slips.
+                </p>
+              </div>
+
+              <div className="col-span-12 lg:col-span-4 relative grain glass corner-ticks p-7">
+                <span className="tick-tr" /><span className="tick-bl" />
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-eyebrow text-text-muted">FLEET · YIELD</span>
+                  <span className="font-mono text-mono-xs text-cyan blink">● LIVE</span>
+                </div>
+                <div className="mt-5 flex items-baseline gap-2">
+                  <span className="font-display text-metric tabular-nums text-text">{fleetYield}</span>
+                  <span className="font-display text-h-sm text-text-muted">%</span>
+                </div>
+                <div className="mt-1 font-mono text-mono-xs text-text-muted">
+                  rolling · 24h window
+                </div>
+
+                <div className="mt-6 grid grid-cols-3 gap-4 pt-5 border-t border-rule">
+                  <div>
+                    <div className="font-mono text-eyebrow text-text-muted mb-1">NODES</div>
+                    <div className="font-mono text-data text-text tabular-nums">1,024</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-eyebrow text-text-muted mb-1">WARN</div>
+                    <div className="font-mono text-data text-amber tabular-nums">{warnCount}</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-eyebrow text-text-muted mb-1">FAIL</div>
+                    <div className="font-mono text-data text-danger tabular-nums">{errorCount}</div>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <div className="flex items-center gap-4 mb-6">
+              <span className="font-mono text-eyebrow text-text-muted">/ STAGE MAP</span>
+              <div className="flex-1 h-px bg-rule" />
+              <span className="font-mono text-mono-xs text-text-muted">
+                {STAGES.length} stations · click to inspect
               </span>
-              <span className="font-data-sm text-data-sm text-primary-fixed-dim uppercase mb-1">Yield</span>
             </div>
-            <div className="space-y-2" role="list">
-              <div className="flex justify-between items-center text-xs" role="listitem">
-                <span className="text-on-surface-variant font-data-sm">Active Nodes</span>
-                <span className="text-primary font-data-display">1,024</span>
-              </div>
-              <div className="flex justify-between items-center text-xs" role="listitem">
-                <span className="text-on-surface-variant font-data-sm">Warnings</span>
-                <span className="text-error font-data-display">3</span>
-              </div>
-              <div className="h-1 bg-surface-variant mt-2 w-full" role="progressbar" aria-valuenow={yieldPct} aria-valuemin={0} aria-valuemax={100} aria-label="Yield progress">
-                <div className="h-full bg-primary-fixed transition-all duration-1000" style={{ width: `${yieldPct}%` }} />
-              </div>
-            </div>
-          </div>
 
-          {/* Pipeline Visualization */}
-          <div className="w-full min-w-[1100px] mt-24 relative h-80 flex items-center justify-between px-12">
-
-            {/* SVG connector lines — decorative */}
-            <svg className="absolute inset-0 w-full h-full z-0" aria-hidden="true" style={{ pointerEvents: 'none' }}>
-              <line className="blueprint-line" x1="5%" x2="95%" y1="50%" y2="50%" />
-              {[12.5, 25, 37.5, 62.5, 75, 87.5].map(x => (
-                <line key={x} className="blueprint-line"
-                  x1={`${x}%`} x2={`${x}%`}
-                  y1="50%" y2={[12.5, 62.5, 87.5].includes(x) ? '70%' : '30%'}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-12">
+              {STAGES.map((s, i) => (
+                <StageNode
+                  key={s.id}
+                  stage={s}
+                  idx={String(i + 1).padStart(2, '0')}
+                  isSelected={selected === s.id}
+                  onClick={() => setSelected(s.id)}
                 />
               ))}
-              <line stroke="#ffb4ab" strokeDasharray="0" strokeWidth="2"
-                x1="50%" x2="50%" y1="50%" y2="30%" />
-            </svg>
-
-            {/* Stage nodes */}
-            <div role="list" aria-label="CoWoS-L production stages" className="contents">
-              {STAGES.map((stage) => {
-                const isDown = stage.pos === 'down'
-                const isError = stage.status === 'error'
-                const isSelected = selectedStage === stage.id
-                return (
-                  <button
-                    key={stage.id}
-                    type="button"
-                    role="listitem"
-                    aria-label={`${stage.label} — ${isError ? 'Error' : 'Nominal'}`}
-                    aria-pressed={isSelected}
-                    onClick={() => setSelectedStage(stage.id)}
-                    onKeyDown={(e) => handleStageKey(e, stage)}
-                    className={`relative z-10 flex flex-col items-center cursor-pointer group select-none bg-transparent border-0 p-0
-                      transition-transform duration-200 hover:scale-105
-                      ${isDown ? 'translate-y-14' : '-translate-y-14'}`}
-                  >
-                    {isError && (
-                      <div
-                        className="absolute w-24 h-24 bg-error/20 rounded-full animate-ping z-0"
-                        style={{ top: '-16px', left: '-16px' }}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <div className={`w-16 h-16 flex items-center justify-center relative z-10 transition-all duration-200
-                      ${isError
-                        ? 'bg-surface border-2 border-error'
-                        : isSelected
-                          ? 'bg-surface border-2 border-primary-fixed'
-                          : 'bg-surface border border-outline-variant group-hover:border-primary-fixed-dim'
-                      }`}
-                    >
-                      <span className={`material-symbols-outlined ${isError ? 'text-error' : 'text-primary-fixed-dim'}`} aria-hidden="true">
-                        {stage.icon}
-                      </span>
-                    </div>
-                    <div className={`mt-3 px-2 py-1 font-label-caps text-label-caps
-                      ${isError ? 'bg-error-container text-on-error-container' : 'bg-surface-variant text-on-surface'}`}
-                    >
-                      {stage.label}
-                    </div>
-                    <div className={`font-data-sm text-data-sm mt-1 ${isError ? 'text-error' : 'text-on-surface-variant'}`}>
-                      {isError ? `ERR-${stage.id}` : stage.id}
-                    </div>
-                  </button>
-                )
-              })}
             </div>
-          </div>
 
-          {/* Inline Diagnostic Terminal */}
-          <div
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[600px] bg-glass border border-secondary p-6 font-data-display z-30"
-            aria-live="polite"
-            aria-label={`Diagnostic terminal for stage ${selectedStage}`}
-          >
-            <div className="flex justify-between items-center mb-4 border-b border-outline pb-2">
-              <span className="text-secondary uppercase text-xs tracking-wider">
-                Diagnostic Terminal :: {selectedStage}
-              </span>
-              <span className="text-on-surface-variant text-xs">
-                {selected?.status === 'error' ? 'A247293C3' : 'NOMINAL'}
-              </span>
-            </div>
-            <div className="space-y-2 text-sm">
-              {msgs.map((m, i) => <TerminalLine key={i} {...m} />)}
-              <div className="flex gap-2 mt-4" aria-hidden="true">
-                <span className="text-primary-fixed animate-pulse">_</span>
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 lg:col-span-7 relative bg-surface hairline-strong">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-rule bg-surface-2/40">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-cyan text-[16px]" aria-hidden="true">terminal</span>
+                    <span className="font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim">
+                      inspector / {stage.id} · {stage.label.toLowerCase()}
+                    </span>
+                  </div>
+                  <span className={`font-mono text-mono-xs
+                    ${stage.status === 'error' ? 'text-danger' : stage.status === 'warn' ? 'text-amber' : 'text-ok'}`}>
+                    {stage.status === 'error' ? 'A247293C3' : stage.status === 'warn' ? 'observing' : 'nominal'}
+                  </span>
+                </div>
+                <div className="px-5 py-4 font-mono text-mono-sm space-y-1.5 min-h-[200px]" role="log" aria-live="polite">
+                  {term.map((m, i) => (
+                    <div key={i} className={`flex gap-2 animate-rise ${TERM_COLOR[m.type]}`}>
+                      <span className="text-text-muted shrink-0" aria-hidden="true">{m.type === 'sub' ? ' ' : '›'}</span>
+                      <span>{m.text}</span>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 pt-1">
+                    <span className="text-text-muted">›</span>
+                    <span className="bg-cyan text-white px-1 animate-flicker">█</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-span-12 lg:col-span-5 flex flex-col gap-4">
+                <div className="bg-surface hairline p-6">
+                  <div className="font-mono text-eyebrow text-text-muted mb-3">CURRENT STAGE</div>
+                  <div className="font-display text-h-sm tracking-[-0.025em]">
+                    {stage.label.toLowerCase().replace('_', ' ')}
+                  </div>
+                  <div className="mt-1 font-mono text-mono-sm text-text-muted">{stage.id} · yield {stage.yield}%</div>
+
+                  <div className="mt-5 grid grid-cols-3 divide-x divide-rule border-t border-rule pt-5">
+                    <div className="pr-3">
+                      <div className="font-mono text-eyebrow text-text-muted">RPN</div>
+                      <div className={`font-display text-[24px] mt-1 ${stage.status === 'error' ? 'text-danger' : 'text-text-dim'}`}>
+                        {stage.status === 'error' ? '187' : '—'}
+                      </div>
+                    </div>
+                    <div className="px-3">
+                      <div className="font-mono text-eyebrow text-text-muted">MTBF</div>
+                      <div className="font-display text-[24px] mt-1 text-text">412h</div>
+                    </div>
+                    <div className="pl-3">
+                      <div className="font-mono text-eyebrow text-text-muted">EVENTS</div>
+                      <div className="font-display text-[24px] mt-1 text-text tabular-nums">{term.length}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {stage.status === 'error' ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => navigate('/defect')}
+                      className="group bg-surface hairline-strong px-5 py-4 text-left flex flex-col gap-2 hover:bg-surface-2 transition-colors"
+                    >
+                      <span className="font-mono text-eyebrow text-danger">02 · DEFECT</span>
+                      <span className="font-display text-[18px] tracking-[-0.02em]">View root cause</span>
+                      <span className="font-mono text-mono-xs text-text-muted group-hover:text-cyan">A247293C3 →</span>
+                    </button>
+                    <button
+                      onClick={() => navigate('/fix')}
+                      className="group bg-cyan text-white px-5 py-4 text-left flex flex-col gap-2 hover:bg-cyan-deep transition-colors"
+                    >
+                      <span className="font-mono text-eyebrow opacity-80">03 · RESOLUTION</span>
+                      <span className="font-display text-[18px] tracking-[-0.02em]">Fix protocol</span>
+                      <span className="font-mono text-mono-xs">RPN 187 → 42 →</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-surface hairline p-6 flex items-center gap-4">
+                    <span className="material-symbols-outlined text-ok" aria-hidden="true">verified</span>
+                    <div className="flex-1">
+                      <div className="font-display text-[16px]">No corrective action</div>
+                      <div className="font-mono text-mono-xs text-text-muted mt-1">
+                        Stage operating within tolerance.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            {selected?.status === 'error' && (
-              <div className="mt-4 flex gap-2 pt-4 border-t border-outline-variant">
-                <button
-                  type="button"
-                  onClick={() => navigate('/defect')}
-                  className="flex-1 py-2 bg-error-container text-on-error-container font-data-sm text-data-sm uppercase hover:opacity-80 transition-opacity duration-200 cursor-pointer"
-                >
-                  View Defect Analysis →
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/fix')}
-                  className="flex-1 py-2 bg-primary-container text-on-primary-container font-data-sm text-data-sm uppercase hover:opacity-80 transition-opacity duration-200 cursor-pointer"
-                >
-                  View Fix Protocol →
-                </button>
-              </div>
-            )}
+
+            <div className="mt-16 font-mono text-mono-xs text-text-muted leading-[1.4] select-none whitespace-pre overflow-hidden opacity-70">
+{`▓▓░░  loopback · cowos-l · operator_01  ░░▓▓ ─── streaming ${(fleetYield * 1.4 | 0).toLocaleString()} events/s · region tpe-n3 · build 2.4.1
+░░▓▓  ─────────────────────────────────────────────────────────────────────  ▓▓░░`}
+            </div>
+
           </div>
         </main>
       </div>

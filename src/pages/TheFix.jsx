@@ -1,30 +1,25 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import DiagnosticModal from '../components/DiagnosticModal'
 
-const AI_LINES = [
-  { type: 'cmd', text: 'Connecting to ERP...',                           prefix: '>' },
-  { type: 'ok',  text: 'success',                                        prefix: '>' },
-  { type: 'cmd', text: 'Reading data from inventory',                    prefix: '>' },
-  { type: 'ai',  text: 'We have 3 late items for subsystem A247293C3.',  prefix: '✦ Hugo AI:' },
-  { type: 'cmd', text: 'Analyzing thermal drift patterns...',             prefix: '>' },
-  { type: 'ai',  text: 'Correlating late items with failure timeline.',   prefix: '✦ Hugo AI:' },
-  { type: 'cmd', text: 'Thinking...',                                     prefix: '>' },
-  { type: 'ai',  text: 'Action 1: Follow up with suppliers immediately.', prefix: '✦ Hugo AI:' },
-  { type: 'ai',  text: 'Action 2: Increase local safety stock by 5 units.', prefix: '✦ Hugo AI:' },
+const HUGO_LINES = [
+  { type: 'cmd', text: 'connecting · erp.coWoS.local' },
+  { type: 'ok',  text: 'success · 12ms' },
+  { type: 'cmd', text: 'reading inventory · subsystem A247293C3' },
+  { type: 'ai',  text: 'Hugo: 3 late items detected.' },
+  { type: 'cmd', text: 'analyzing thermal drift patterns…' },
+  { type: 'ai',  text: 'Hugo: late items correlate with failure timeline.' },
+  { type: 'cmd', text: 'thinking…' },
+  { type: 'ai',  text: 'Hugo · action 01 — expedite suppliers immediately.' },
+  { type: 'ai',  text: 'Hugo · action 02 — increase local safety stock by 5.' },
 ]
 
-const ZOOM_CONTROLS = [
-  { icon: 'zoom_in',            label: 'Zoom in',    fn: (z) => Math.min(2, +(z + 0.2).toFixed(1)) },
-  { icon: 'zoom_out',           label: 'Zoom out',   fn: (z) => Math.max(0.5, +(z - 0.2).toFixed(1)) },
-  { icon: 'center_focus_strong',label: 'Reset zoom', fn: () => 1 },
-]
+const TERM_COLOR = { cmd: 'text-text-dim', ok: 'text-ok', ai: 'text-cyan' }
 
 function ReportModal({ onClose }) {
   const closeRef = useRef(null)
-
   useEffect(() => { closeRef.current?.focus() }, [])
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
@@ -32,76 +27,90 @@ function ReportModal({ onClose }) {
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
-  const rows = [
-    ['Failure Mode',    'Thermal Overshoot @ Zone 4'],
-    ['Stage',           'STG-04 COW_BONDING'],
-    ['Severity (S)',    '8 / 10'],
-    ['Occurrence (O)', '4 / 10'],
-    ['Detection (D)',  '3 / 10'],
-    ['Current RPN',    '187 — CRITICAL'],
-    ['Projected RPN',  '42 — Acceptable'],
-    ['Cost Avoided',   '$24,500.00 USD'],
-  ]
-
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] grid place-items-center bg-ink/50 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       aria-labelledby="report-title"
     >
-      <div className="w-[640px] border border-primary-fixed bg-surface-container-low">
-        <div className="flex justify-between items-center border-b border-outline-variant px-6 py-3">
-          <span id="report-title" className="font-data-sm text-data-sm text-primary-fixed uppercase tracking-wider">
-            FMECA Report :: A247293C3
-          </span>
+      <div className="relative w-[680px] max-w-[92vw] bg-surface hairline-strong corner-ticks shadow-2xl">
+        <span className="tick-tr" /><span className="tick-bl" />
+
+        <div className="flex items-center justify-between px-6 py-4 border-b border-rule">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-cyan text-[18px]" aria-hidden="true">description</span>
+            <span id="report-title" className="font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim">
+              FMECA report · A247293C3
+            </span>
+          </div>
           <button
             ref={closeRef}
-            type="button"
-            aria-label="Close report"
             onClick={onClose}
-            className="p-1 text-on-surface-variant hover:text-primary transition-colors duration-200 cursor-pointer rounded"
+            aria-label="Close report"
+            className="material-symbols-outlined text-text-dim hover:text-cyan"
           >
-            <span className="material-symbols-outlined" aria-hidden="true">close</span>
+            close
           </button>
         </div>
-        <div className="p-6 font-data-sm text-data-sm space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            {rows.map(([k, v]) => (
-              <div key={k} className="border border-outline-variant p-3">
-                <div className="font-label-caps text-label-caps text-on-surface-variant mb-1">{k}</div>
-                <div className={
-                  k === 'Current RPN' ? 'text-error' :
-                  k === 'Projected RPN' ? 'text-primary-fixed' :
-                  'text-on-surface'
-                }>{v}</div>
-              </div>
-            ))}
+
+        <div className="p-6 space-y-6">
+          <div>
+            <div className="font-mono text-eyebrow text-text-muted mb-2">SUMMARY</div>
+            <h3 className="font-display text-h-sm tracking-[-0.025em]">
+              Thermal overshoot at zone 4 · COW_BONDING.
+            </h3>
           </div>
-          <div className="border border-outline-variant p-4">
-            <div className="font-label-caps text-label-caps text-on-surface-variant mb-2">CORRECTIVE ACTIONS</div>
-            <ol className="space-y-1 text-on-surface list-decimal list-inside">
-              <li>Expedite 3 late supply items with suppliers</li>
-              <li>Increase local safety stock by 5 units</li>
-              <li>Recalibrate heater block B thermal profile</li>
-              <li>Schedule 72h monitoring window post-fix</li>
+          <div className="grid grid-cols-2 gap-px bg-rule">
+            {[
+              ['Failure Mode',   'Thermal Overshoot @ Zone 4'],
+              ['Stage',          'STG-04 · COW_BONDING'],
+              ['Severity (S)',   '8 / 10'],
+              ['Occurrence (O)', '4 / 10'],
+              ['Detection (D)',  '3 / 10'],
+              ['Current RPN',    '187 — critical'],
+              ['Projected RPN',  '42 — acceptable'],
+              ['Cost Avoided',   '$24,500.00 USD'],
+            ].map(([k, v]) => {
+              const tone = k === 'Current RPN' ? 'text-danger' : k === 'Projected RPN' ? 'text-cyan' : 'text-text'
+              return (
+                <div key={k} className="bg-surface p-4">
+                  <div className="font-mono text-eyebrow text-text-muted mb-1.5">{k.toUpperCase()}</div>
+                  <div className={`font-mono text-data ${tone}`}>{v}</div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="hairline p-5">
+            <div className="font-mono text-eyebrow text-text-muted mb-3">CORRECTIVE ACTIONS</div>
+            <ol className="space-y-2 font-mono text-mono-sm text-text-dim">
+              {[
+                'Expedite 3 late supply items with suppliers',
+                'Increase local safety stock by 5 units',
+                'Recalibrate heater block B thermal profile',
+                'Schedule 72h monitoring window post-fix',
+              ].map((a, i) => (
+                <li key={a} className="flex gap-3">
+                  <span className="text-cyan tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+                  <span>{a}</span>
+                </li>
+              ))}
             </ol>
           </div>
         </div>
-        <div className="border-t border-outline-variant px-6 py-4 flex justify-end gap-3">
+
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-rule bg-surface-2/40">
           <button
-            type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-outline text-on-surface-variant font-data-sm text-data-sm uppercase hover:bg-surface-bright transition-colors duration-200 cursor-pointer"
+            className="px-4 py-2 hairline font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim hover:bg-surface-2"
           >
             Close
           </button>
           <button
-            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-primary-container text-on-primary-container font-data-sm text-data-sm uppercase hover:opacity-80 transition-opacity duration-200 cursor-pointer"
+            className="px-5 py-2 bg-cyan text-white font-mono text-mono-xs uppercase tracking-[0.18em] hover:bg-cyan-deep"
           >
-            Export PDF
+            Export PDF →
           </button>
         </div>
       </div>
@@ -110,180 +119,213 @@ function ReportModal({ onClose }) {
 }
 
 export default function TheFix() {
-  const navigate = useNavigate()
-  const [showDiag, setShowDiag]     = useState(false)
+  const [showDiag, setShowDiag] = useState(false)
   const [showReport, setShowReport] = useState(false)
-  const [visibleLines, setVisibleLines] = useState(0)
+  const [n, setN] = useState(0)
   const [zoom, setZoom] = useState(1)
+  const navigate = useNavigate()
 
   useEffect(() => {
-    if (visibleLines >= AI_LINES.length) return
-    const id = setTimeout(() => setVisibleLines(v => v + 1), 700)
+    if (n >= HUGO_LINES.length) return
+    const id = setTimeout(() => setN(v => v + 1), 700)
     return () => clearTimeout(id)
-  }, [visibleLines])
+  }, [n])
 
   return (
-    <div className="bg-background text-on-background font-body-md min-h-screen blueprint-grid flex flex-col">
+    <div className="min-h-screen bg-bg text-text font-sans">
       <TopBar onDiagnostic={() => setShowDiag(true)} />
 
-      <div className="flex h-[calc(100vh-64px)] mt-16 overflow-hidden">
-        <Sidebar active="thermal" onNewAnalysis={() => navigate('/defect')} />
+      <div className="flex pt-16 h-screen">
+        <Sidebar />
 
-        <main id="main-content" className="flex-1 overflow-y-auto p-8 relative">
-          <div className="relative z-10 grid grid-cols-12 gap-4 max-w-[1440px] mx-auto h-full">
+        <main className="flex-1 overflow-y-auto scrollbar-thin micro-grid">
+          <div className="max-w-[1480px] mx-auto px-10 py-12 space-y-12">
 
-            {/* Left column */}
-            <div className="col-span-12 lg:col-span-5 flex flex-col gap-4">
-
-              {/* The Fix Card */}
-              <div className="glass-panel border border-primary/20 p-panel-padding relative">
-                <div className="absolute top-2 right-2 font-label-caps text-label-caps text-on-surface-variant border border-outline px-1" aria-hidden="true">
-                  REF-RES-992
+            <header className="grid grid-cols-12 gap-8">
+              <div className="col-span-12 lg:col-span-7">
+                <div className="font-mono text-eyebrow text-cyan mb-6 flex items-center gap-3">
+                  <span className="w-8 h-px bg-cyan" />
+                  RESOLUTION · REF-RES-992
                 </div>
-                <div className="mb-6">
-                  <h1 className="font-headline-lg text-headline-lg text-primary mb-2">The Fix</h1>
-                  <p className="font-data-display text-data-display text-on-surface-variant">
-                    Recommended Corrective Action
-                  </p>
-                </div>
+                <h1 className="font-display text-h-lg text-balance leading-[0.9]">
+                  From <span className="text-danger">187</span>
+                  <span className="text-text-muted"> to </span>
+                  <span className="italic text-cyan">42</span>.
+                </h1>
+                <p className="mt-6 max-w-xl text-text-dim text-lead font-light">
+                  Hugo's recommended corrective protocol drops Risk Priority below threshold
+                  inside a four-hour predictive drift window — before scrap accumulates further.
+                </p>
+              </div>
 
-                {/* RPN comparison */}
-                <div className="bg-surface-container-low border border-outline-variant p-4 mb-6">
-                  <div className="flex justify-between items-center border-b border-outline-variant pb-4 mb-4">
+              <div className="col-span-12 lg:col-span-5 relative grain glass corner-ticks p-7">
+                <span className="tick-tr" /><span className="tick-bl" />
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-eyebrow text-cyan">COST · AVOIDED</span>
+                  <span className="font-mono text-mono-xs text-cyan">+ projected</span>
+                </div>
+                <div className="mt-5 flex items-baseline gap-1 font-display tabular-nums">
+                  <span className="text-text-muted text-h-sm leading-none">$</span>
+                  <span className="text-metric leading-none text-text">24,500</span>
+                  <span className="text-h-sm leading-none text-text-muted">.00</span>
+                  <span className="ml-2 font-mono text-mono-xs text-text-muted">USD</span>
+                </div>
+                <div className="mt-6 grid grid-cols-3 gap-4 pt-5 border-t border-rule">
+                  <div>
+                    <div className="font-mono text-eyebrow text-text-muted mb-1">WINDOW</div>
+                    <div className="font-mono text-data text-text">04:00:00</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-eyebrow text-text-muted mb-1">CONF.</div>
+                    <div className="font-mono text-data text-cyan">94%</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-eyebrow text-text-muted mb-1">ETA</div>
+                    <div className="font-mono text-data text-text">45s</div>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <section className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
+                <div className="bg-surface hairline-strong p-7">
+                  <div className="font-mono text-eyebrow text-text-muted mb-5">RPN · DELTA</div>
+                  <div className="flex items-center justify-between gap-6">
                     <div>
-                      <div className="font-label-caps text-label-caps text-on-surface-variant mb-1">CURRENT RPN</div>
-                      <div className="font-headline-xl text-headline-xl text-error" aria-label="Current risk priority number: 187, critical">187</div>
+                      <div className="font-mono text-eyebrow text-text-muted mb-2">CURRENT</div>
+                      <div className="font-display text-metric leading-none text-danger">187</div>
                     </div>
-                    <span className="material-symbols-outlined text-primary text-3xl" aria-hidden="true">arrow_right_alt</span>
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="font-mono text-eyebrow text-text-muted">→</span>
+                      <span className="material-symbols-outlined text-cyan text-[28px]" aria-hidden="true">trending_down</span>
+                    </div>
                     <div className="text-right">
-                      <div className="font-label-caps text-label-caps text-on-surface-variant mb-1">PROJECTED RPN</div>
-                      <div className="font-headline-xl text-headline-xl text-primary-fixed" aria-label="Projected risk priority number after fix: 42">42</div>
+                      <div className="font-mono text-eyebrow text-text-muted mb-2">PROJECTED</div>
+                      <div className="font-display text-metric leading-none text-cyan">042</div>
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-data-sm text-data-sm text-on-surface">Predictive Drift Window</span>
-                      <span className="font-data-sm text-data-sm text-primary-fixed border border-primary-fixed px-2 py-0.5">
-                        04:00:00
-                      </span>
-                    </div>
-                    <div className="h-1 bg-surface-bright w-full" role="progressbar" aria-valuenow={25} aria-valuemin={0} aria-valuemax={100} aria-label="Drift window consumed">
-                      <div className="h-1 bg-primary-fixed w-1/4 relative">
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="mb-8">
-                  <div className="font-label-caps text-label-caps text-on-surface-variant mb-2">ESTIMATED COST AVOIDED</div>
-                  <div className="font-data-display text-primary text-2xl tracking-widest">
-                    $24,500.00 <span className="text-on-surface-variant text-sm">USD</span>
+                  <div className="mt-6 pt-5 border-t border-rule">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono text-mono-xs text-text-dim">Predictive drift window</span>
+                      <span className="font-mono text-mono-xs text-cyan tabular-nums">04:00:00</span>
+                    </div>
+                    <div className="h-1 w-full bg-surface-2 overflow-hidden">
+                      <div className="h-full bg-cyan" style={{ width: '24%' }} />
+                    </div>
                   </div>
                 </div>
 
                 <button
-                  type="button"
                   onClick={() => setShowReport(true)}
-                  className="w-full bg-primary-fixed text-on-primary-fixed font-data-display py-4 hover:bg-primary-fixed-dim transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                  className="group bg-cyan text-white py-5 px-6 flex items-center justify-between hover:bg-cyan-deep transition-colors"
                 >
-                  <span className="material-symbols-outlined" aria-hidden="true">summarize</span>
-                  GENERATE FMECA REPORT
+                  <span className="font-display text-[20px] tracking-[-0.02em]">Generate FMECA report</span>
+                  <span className="font-mono text-mono-xs">PDF · 1pg →</span>
+                </button>
+
+                <div className="bg-surface hairline-strong flex-1 min-h-[220px] flex flex-col">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-rule bg-surface-2/40">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-cyan text-[16px]" aria-hidden="true">terminal</span>
+                      <span className="font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim">
+                        hugo · diagnostic trace
+                      </span>
+                    </div>
+                    <span className="font-mono text-mono-xs text-cyan blink">● live</span>
+                  </div>
+                  <div className="px-5 py-4 font-mono text-mono-sm space-y-1.5 flex-1 overflow-y-auto scrollbar-thin" role="log" aria-live="polite">
+                    {HUGO_LINES.slice(0, n).map((m, i) => (
+                      <div key={i} className={`flex gap-2 animate-rise ${TERM_COLOR[m.type]}`}>
+                        <span className="text-text-muted shrink-0" aria-hidden="true">{m.type === 'ai' ? '✦' : '›'}</span>
+                        <span>{m.text}</span>
+                      </div>
+                    ))}
+                    {n < HUGO_LINES.length && (
+                      <span className="inline-block w-2 h-3 bg-cyan animate-flicker mt-1" aria-hidden="true" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-span-12 lg:col-span-7 relative bg-surface hairline-strong overflow-hidden corner-ticks min-h-[640px]">
+                <span className="tick-tr" /><span className="tick-bl" />
+
+                <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+                  <span className="font-mono text-mono-xs text-text-dim bg-surface-2 hairline px-3 py-1.5">
+                    schematic · STG-04
+                  </span>
+                </div>
+                <div className="absolute top-4 right-4 z-20 font-mono text-mono-xs text-text-muted">
+                  ZOOM · {Math.round(zoom * 100)}%
+                </div>
+
+                <div
+                  className="absolute inset-0 dot-grid transition-transform duration-500"
+                  style={{ transform: `scale(${zoom})` }}
+                >
+                  <div className="absolute inset-[12%] hairline border-cyan/30" />
+                  <div className="absolute inset-[12%] grid grid-cols-4 grid-rows-4 pointer-events-none">
+                    {Array.from({ length: 16 }).map((_, i) => (
+                      <div key={i} className="border-r border-b border-rule-soft" />
+                    ))}
+                  </div>
+
+                  <div className="absolute" style={{ top: '38%', left: '28%' }}>
+                    <div className="relative w-[260px] h-[170px] hairline border-cyan bg-cyan/5">
+                      <span className="absolute -top-7 left-0 bg-cyan text-white font-mono text-mono-xs px-2 py-1">
+                        A247293C3 · primary
+                      </span>
+                      <span className="absolute -right-3 top-1/2 w-6 h-px bg-cyan" />
+                      <span className="absolute font-mono text-mono-xs text-cyan" style={{ left: 'calc(100% + 16px)', top: 'calc(50% - 8px)' }}>
+                        critical point
+                      </span>
+                      <span className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan" />
+                      <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-cyan" />
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-cyan" />
+                    </div>
+                  </div>
+
+                  <div className="absolute" style={{ top: '20%', right: '20%' }}>
+                    <div className="relative w-[120px] h-[120px] hairline border-amber/60 bg-amber/5">
+                      <span className="absolute -top-6 left-0 font-mono text-mono-xs text-amber">X219128</span>
+                    </div>
+                  </div>
+
+                  <div className="absolute" style={{ bottom: '18%', right: '32%' }}>
+                    <div className="relative px-3 py-2 hairline bg-surface-2/60">
+                      <span className="font-mono text-mono-xs text-text-dim">heater_block_B</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-4 right-4 flex hairline-strong divide-x divide-rule bg-surface/95 backdrop-blur z-10">
+                  {[
+                    { icon: 'add',                 fn: () => setZoom(z => Math.min(2, +(z + 0.2).toFixed(1))), label: 'Zoom in' },
+                    { icon: 'remove',              fn: () => setZoom(z => Math.max(0.5, +(z - 0.2).toFixed(1))), label: 'Zoom out' },
+                    { icon: 'center_focus_strong', fn: () => setZoom(1), label: 'Reset zoom' },
+                  ].map(({ icon, fn, label }) => (
+                    <button
+                      key={icon}
+                      onClick={fn}
+                      aria-label={label}
+                      className="w-10 h-10 grid place-items-center text-text-dim hover:text-cyan hover:bg-surface-2"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => navigate('/defect')}
+                  className="absolute bottom-4 left-4 z-10 px-4 py-2 hairline-strong bg-surface/95 backdrop-blur font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim hover:text-cyan"
+                >
+                  ← back to defect
                 </button>
               </div>
+            </section>
 
-              {/* AI Terminal */}
-              <div className="flex-1 glass-panel border border-secondary/30 p-panel-padding relative flex flex-col min-h-[240px]">
-                <div className="absolute top-2 right-2 font-label-caps text-label-caps text-secondary border border-secondary/50 px-1" aria-hidden="true">
-                  TERM-AI-ACT
-                </div>
-                <div className="flex items-center gap-2 mb-4 text-secondary" aria-hidden="true">
-                  <span className="material-symbols-outlined text-sm">terminal</span>
-                  <span className="font-data-sm uppercase">Diagnostic Trace</span>
-                </div>
-                <div
-                  role="log"
-                  aria-live="polite"
-                  aria-label="AI diagnostic trace"
-                  className="flex-1 font-data-sm text-data-sm text-on-surface-variant space-y-2 overflow-y-auto terminal-scroll pr-2"
-                >
-                  {AI_LINES.slice(0, visibleLines).map(({ type, text, prefix }, i) => (
-                    <div key={i} className={`flex gap-2 ${type === 'ai' ? 'pl-4' : ''}`}>
-                      <span className={type === 'ai' ? 'text-secondary shrink-0' : 'text-outline shrink-0'} aria-hidden="true">{prefix}</span>
-                      <span className={type === 'ok' ? 'text-primary-fixed' : type === 'ai' ? 'text-on-surface' : ''}>{text}</span>
-                    </div>
-                  ))}
-                  {visibleLines < AI_LINES.length && (
-                    <div className="flex gap-2" aria-hidden="true">
-                      <span className="text-primary-fixed animate-pulse">_</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right column — Machine Schematic */}
-            <div className="col-span-12 lg:col-span-7 relative border border-outline-variant bg-surface-container-lowest/50 flex items-center justify-center overflow-hidden min-h-[500px]">
-              <div
-                className="absolute inset-0 opacity-30 pointer-events-none"
-                aria-hidden="true"
-                style={{
-                  backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 49px, #8e9378 50px), repeating-linear-gradient(90deg, transparent, transparent 49px, #8e9378 50px)',
-                  backgroundSize: '50px 50px'
-                }}
-              />
-
-              {/* Schematic */}
-              <div
-                className="relative w-[80%] h-[80%] border border-primary-fixed/50 p-4 transition-transform duration-300"
-                style={{ transform: `scale(${zoom})` }}
-                aria-label={`Machine schematic at ${Math.round(zoom * 100)}% zoom`}
-              >
-                {/* Grid lines */}
-                {['top-1/4', 'top-1/2', 'top-3/4'].map(t => (
-                  <div key={t} className={`absolute ${t} left-0 w-full h-px border-t border-dashed border-outline-variant`} aria-hidden="true" />
-                ))}
-                {['left-1/4', 'left-1/2', 'left-3/4'].map(l => (
-                  <div key={l} className={`absolute ${l} top-0 w-px h-full border-l border-dashed border-outline-variant`} aria-hidden="true" />
-                ))}
-
-                {/* Primary target */}
-                <div className="absolute top-1/2 left-1/3 w-56 h-40 border-2 border-primary-fixed bg-primary-fixed/10 z-10 p-2">
-                  <div className="absolute -top-6 -left-px bg-primary-fixed text-on-primary-fixed font-data-sm px-2 py-1 text-xs">
-                    A247293C3
-                  </div>
-                  <div className="absolute -right-2 top-1/2 w-14 h-px bg-primary-fixed" aria-hidden="true" />
-                  <div className="absolute font-data-sm text-primary-fixed text-xs" style={{ right: '-72px', top: 'calc(50% - 10px)' }}>
-                    CRITICAL POINT
-                  </div>
-                </div>
-
-                {/* Secondary target */}
-                <div className="absolute top-1/4 right-1/4 w-28 h-28 border border-secondary bg-secondary/5 z-10">
-                  <div className="absolute -top-5 -left-px text-secondary font-data-sm text-xs">X219128</div>
-                </div>
-              </div>
-
-              {/* Zoom controls */}
-              <div className="absolute bottom-4 right-4 flex gap-2 z-20" role="group" aria-label="Schematic zoom controls">
-                {ZOOM_CONTROLS.map(({ icon, label, fn }) => (
-                  <button
-                    key={icon}
-                    type="button"
-                    aria-label={label}
-                    onClick={() => setZoom(fn)}
-                    className="w-10 h-10 border border-outline-variant bg-surface text-on-surface hover:bg-surface-bright flex items-center justify-center transition-colors duration-200 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-sm" aria-hidden="true">{icon}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Zoom indicator */}
-              <div className="absolute top-4 left-4 font-label-caps text-label-caps text-on-surface-variant border border-outline px-2 py-1" aria-live="polite">
-                ZOOM: {Math.round(zoom * 100)}%
-              </div>
-            </div>
           </div>
         </main>
       </div>
