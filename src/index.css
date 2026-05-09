@@ -5,6 +5,27 @@
 @layer base {
   * { box-sizing: border-box; }
   body { background-color: #121412; color: #e3e3df; }
+
+  /* Global focus ring — lime to match design system */
+  :focus-visible {
+    outline: 2px solid #c7f300;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Remove focus ring for mouse users only */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Respect user motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 @layer utilities {
@@ -15,6 +36,7 @@
     display: inline-block;
     line-height: 1;
     user-select: none;
+    pointer-events: none; /* icons inside buttons shouldn't capture clicks */
   }
   .fill-icon {
     font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
