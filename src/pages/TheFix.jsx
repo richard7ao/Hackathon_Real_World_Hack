@@ -5,6 +5,8 @@ import Sidebar from '../components/Sidebar'
 import DiagnosticModal from '../components/DiagnosticModal'
 import { fixAndVerify, buildTerminalLines, downloadReport } from '../api'
 import { useAnalysis } from '../AnalysisContext'
+import { useNarrator } from '../NarratorContext'
+import { NARRATION } from '../narration'
 
 const TERM_COLOR = { cmd: 'text-text-dim', ok: 'text-ok', ai: 'text-cyan' }
 
@@ -140,11 +142,18 @@ function ReportModal({ onClose, fixResult, defectPattern, enrichment }) {
 export default function TheFix() {
   const navigate  = useNavigate()
   const { defectPattern, enrichment, fixResult: cachedFix, update } = useAnalysis()
+  const { speak } = useNarrator()
   const [showDiag, setShowDiag]     = useState(false)
   const [showReport, setShowReport] = useState(false)
   const [fixResult, setFixResult]   = useState(cachedFix)
   const [zoom, setZoom]             = useState(1)
   const [visibleLines, setVisibleLines] = useState(0)
+  const verifiedNarrated = useRef(false)
+
+  // Narrate on mount using default RPN values (168→28) — correct for demo
+  useEffect(() => {
+    speak(NARRATION.fix_mount(168, 28))
+  }, [])
 
   useEffect(() => {
     if (cachedFix) { setFixResult(cachedFix); return }
@@ -174,6 +183,16 @@ export default function TheFix() {
   const impPct    = v?.rpn_improvement_pct ?? 83.3
   const conf      = fixResult?.correlation?.llm_analysis?.confidence ?? 0.91
   const action    = v?.action_applied
+
+  // Narrate once when fix verification result arrives
+  useEffect(() => {
+    if (v?.fix_verified && !verifiedNarrated.current) {
+      verifiedNarrated.current = true
+      // Small delay so it doesn't overlap with mount narration
+      const id = setTimeout(() => speak(NARRATION.fix_verified), 3500)
+      return () => clearTimeout(id)
+    }
+  }, [v?.fix_verified])
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans">

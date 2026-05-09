@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import DiagnosticModal from '../components/DiagnosticModal'
 import { correlate, buildTerminalLines } from '../api'
 import { useAnalysis } from '../AnalysisContext'
+import { useNarrator } from '../NarratorContext'
+import { NARRATION } from '../narration'
 
 const STATIC_TERM_LINES = [
   { type: 'cmd', text: 'connecting · erp.coWoS.local' },
@@ -26,10 +28,17 @@ function useScrap(initial = 12405.89) {
 export default function TheDefect() {
   const navigate = useNavigate()
   const { defectPattern, enrichment, correlation: cachedCorrelation, update } = useAnalysis()
+  const { speak } = useNarrator()
   const [showDiag, setShowDiag] = useState(false)
   const [correlation, setCorrelation] = useState(cachedCorrelation)
   const [visibleLines, setVisibleLines] = useState(0)
   const scrap = useScrap()
+  const analysisDoneNarrated = useRef(false)
+
+  // Narrate on mount
+  useEffect(() => {
+    speak(NARRATION.defect_mount)
+  }, [])
 
   // Fetch correlation on mount if not cached
   useEffect(() => {
@@ -57,6 +66,15 @@ export default function TheDefect() {
     const id = setTimeout(() => setVisibleLines(v => v + 1), 700)
     return () => clearTimeout(id)
   }, [visibleLines, allLines.length, correlation])
+
+  // Narrate once when typewriter finishes (recompute done inline to avoid TDZ)
+  useEffect(() => {
+    const done = visibleLines >= allLines.length && allLines.length > 0
+    if (done && !analysisDoneNarrated.current) {
+      analysisDoneNarrated.current = true
+      speak(NARRATION.defect_analysis_done)
+    }
+  }, [visibleLines, allLines.length])
 
   const fmeca    = enrichment?.assessment?.fmeca
   const ipc      = enrichment?.assessment?.ipc_a_610

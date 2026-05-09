@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useNarrator } from '../NarratorContext'
+import { NARRATION } from '../narration'
 
 const SECTIONS = [
   { id: 'problem',  num: '01', label: 'Problem' },
@@ -136,9 +138,20 @@ function MetricCard({ metric, label, note, dark = false }) {
   )
 }
 
+const SECTION_SCRIPTS = {
+  problem:   NARRATION.landing_problem,
+  market:    NARRATION.landing_market,
+  logistics: NARRATION.landing_logistics,
+  solution:  NARRATION.landing_solution,
+  demo:      NARRATION.landing_demo,
+}
+
 export default function Landing() {
   const [active, setActive] = useState('problem')
+  const { speak } = useNarrator()
+  const narratedRef = useRef(new Set())
 
+  // Active-section tracker (for sidebar dots)
   useEffect(() => {
     const obs = new IntersectionObserver(
       (entries) => {
@@ -152,6 +165,27 @@ export default function Landing() {
     })
     return () => obs.disconnect()
   }, [])
+
+  // Narration — fires once per section on first entry
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          const id = e.target.id
+          if (e.isIntersecting && !narratedRef.current.has(id) && SECTION_SCRIPTS[id]) {
+            narratedRef.current.add(id)
+            speak(SECTION_SCRIPTS[id])
+          }
+        })
+      },
+      { threshold: 0.3 }
+    )
+    SECTIONS.forEach((s) => {
+      const el = document.getElementById(s.id)
+      if (el) obs.observe(el)
+    })
+    return () => obs.disconnect()
+  }, [speak])
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans">
