@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 
 const TITLES = {
-  '/':       { eyebrow: 'SURFACE / 01', title: 'Pipeline',   sub: 'Live fleet · 8-stage CoWoS-L line' },
+  '/demo':   { eyebrow: 'SURFACE / 01', title: 'Pipeline',   sub: 'Live fleet · 8-stage CoWoS-L line' },
   '/defect': { eyebrow: 'SURFACE / 02', title: 'Defect',     sub: 'Failure mode A247293C3 · STG-04' },
   '/fix':    { eyebrow: 'SURFACE / 03', title: 'Resolution', sub: 'Recommended corrective protocol' },
 }
@@ -20,7 +20,7 @@ const pad = (n) => String(n).padStart(2, '0')
 
 export default function TopBar({ onDiagnostic }) {
   const { pathname } = useLocation()
-  const t = TITLES[pathname] ?? TITLES['/']
+  const t = TITLES[pathname] ?? TITLES['/demo']
   const now = useClock()
   const ts = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`
 
