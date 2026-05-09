@@ -249,7 +249,7 @@ const SECTION_SCRIPTS = {
 
 export default function Landing() {
   const [active, setActive] = useState('problem')
-  const { speak } = useNarrator()
+  const { queue } = useNarrator()
   const narratedRef = useRef(new Set())
 
   // Active-section tracker (for sidebar dots)
@@ -275,7 +275,7 @@ export default function Landing() {
           const id = e.target.id
           if (e.isIntersecting && !narratedRef.current.has(id) && SECTION_SCRIPTS[id]) {
             narratedRef.current.add(id)
-            speak(SECTION_SCRIPTS[id])
+            queue(SECTION_SCRIPTS[id])
           }
         })
       },
@@ -286,7 +286,7 @@ export default function Landing() {
       if (el) obs.observe(el)
     })
     return () => obs.disconnect()
-  }, [speak])
+  }, [queue])
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans">

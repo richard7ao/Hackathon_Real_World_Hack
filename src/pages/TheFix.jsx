@@ -13,6 +13,7 @@ const TERM_COLOR = { cmd: 'text-text-dim', ok: 'text-ok', ai: 'text-cyan' }
 function ReportModal({ onClose, fixResult, defectPattern, enrichment }) {
   const closeRef = useRef(null)
   const [downloading, setDownloading] = useState(false)
+  const { speak, stop, speaking } = useNarrator()
 
   useEffect(() => { closeRef.current?.focus() }, [])
   useEffect(() => {
@@ -50,6 +51,33 @@ function ReportModal({ onClose, fixResult, defectPattern, enrichment }) {
     if (ok) onClose()
   }
 
+  function handleNarrate() {
+    if (speaking) { stop(); return }
+    const label   = enrichment?.assessment?.human_label ?? 'Edge-ring defect'
+    const llm     = fixResult?.correlation?.llm_analysis
+    const summary = llm?.corrective_action?.summary ?? 'Reduce reflow zone 3 setpoint on M3 to 240 degrees Celsius.'
+    const adj     = llm?.corrective_action?.specific_adjustment ?? 'Reduce zone 3 setpoint from 244 to 240 degrees Celsius.'
+    const method  = llm?.corrective_action?.verification_method ?? 'Run a verification batch. Defect rate should drop below 3 percent.'
+    const rpnB    = v?.rpn_before ?? 168
+    const rpnA    = v?.rpn_after  ?? 28
+    const fmeca   = enrichment?.assessment?.fmeca
+    const S = fmeca?.severity ?? 7
+    const O = fmeca?.occurrence ?? 6
+    const D = fmeca?.detection  ?? 4
+    speak(
+      `FMECA Report. ${label}. Stage 4, CoW Bonding. ` +
+      `Severity ${S}, Occurrence ${O}, Detection ${D}. ` +
+      `Current Risk Priority Number: ${rpnB} — critical. ` +
+      `Projected after fix: ${rpnA} — acceptable. ` +
+      `Corrective actions: ${summary}. ${adj}. ${method}. ` +
+      `Schedule a 72-hour monitoring window post-fix. ` +
+      `Cost avoided: $24,500 USD. ` +
+      (v?.fix_verified
+        ? `Fix verified. Defect rate dropped from ${((v.defect_rate_before ?? 0.16) * 100).toFixed(0)} to ${((v.defect_rate_after ?? 0.021) * 100).toFixed(1)} percent. Loop closed.`
+        : '')
+    )
+  }
+
   return (
     <div
       className="fixed inset-0 z-[100] grid place-items-center bg-ink/50 backdrop-blur-md"
@@ -67,14 +95,30 @@ function ReportModal({ onClose, fixResult, defectPattern, enrichment }) {
               FMECA report · {enrichment?.image_id?.toUpperCase() ?? 'A247293C3'}
             </span>
           </div>
-          <button
-            ref={closeRef}
-            onClick={onClose}
-            aria-label="Close report"
-            className="material-symbols-outlined text-text-dim hover:text-cyan"
-          >
-            close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleNarrate}
+              aria-label={speaking ? 'Stop narration' : 'Narrate report'}
+              title={speaking ? 'Stop narration' : 'Narrate report'}
+              className={`w-8 h-8 grid place-items-center hairline transition-all duration-200
+                ${speaking
+                  ? 'bg-cyan/10 border-cyan text-cyan hover:bg-cyan/20'
+                  : 'bg-surface text-text-dim hover:text-cyan hover:border-cyan'
+                }`}
+            >
+              <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+                {speaking ? 'stop' : 'volume_up'}
+              </span>
+            </button>
+            <button
+              ref={closeRef}
+              onClick={onClose}
+              aria-label="Close report"
+              className="material-symbols-outlined text-text-dim hover:text-cyan"
+            >
+              close
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-6">
@@ -142,7 +186,7 @@ function ReportModal({ onClose, fixResult, defectPattern, enrichment }) {
 export default function TheFix() {
   const navigate  = useNavigate()
   const { defectPattern, enrichment, fixResult: cachedFix, update } = useAnalysis()
-  const { speak } = useNarrator()
+  const { speak, queue } = useNarrator()
   const [showDiag, setShowDiag]     = useState(false)
   const [showReport, setShowReport] = useState(false)
   const [fixResult, setFixResult]   = useState(cachedFix)
@@ -150,9 +194,9 @@ export default function TheFix() {
   const [visibleLines, setVisibleLines] = useState(0)
   const verifiedNarrated = useRef(false)
 
-  // Narrate on mount using default RPN values (168→28) — correct for demo
+  // Queue mount narration for speaker button
   useEffect(() => {
-    speak(NARRATION.fix_mount(168, 28))
+    queue(NARRATION.fix_mount(168, 28))
   }, [])
 
   useEffect(() => {
@@ -184,13 +228,11 @@ export default function TheFix() {
   const conf      = fixResult?.correlation?.llm_analysis?.confidence ?? 0.91
   const action    = v?.action_applied
 
-  // Narrate once when fix verification result arrives
+  // Queue fix-verified narration so speaker button updates to latest message
   useEffect(() => {
     if (v?.fix_verified && !verifiedNarrated.current) {
       verifiedNarrated.current = true
-      // Small delay so it doesn't overlap with mount narration
-      const id = setTimeout(() => speak(NARRATION.fix_verified), 3500)
-      return () => clearTimeout(id)
+      queue(NARRATION.fix_verified)
     }
   }, [v?.fix_verified])
 

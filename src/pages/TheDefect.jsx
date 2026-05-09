@@ -28,16 +28,16 @@ function useScrap(initial = 12405.89) {
 export default function TheDefect() {
   const navigate = useNavigate()
   const { defectPattern, enrichment, correlation: cachedCorrelation, update } = useAnalysis()
-  const { speak } = useNarrator()
+  const { speak, queue } = useNarrator()
   const [showDiag, setShowDiag] = useState(false)
   const [correlation, setCorrelation] = useState(cachedCorrelation)
   const [visibleLines, setVisibleLines] = useState(0)
   const scrap = useScrap()
   const analysisDoneNarrated = useRef(false)
 
-  // Narrate on mount
+  // Queue mount narration for speaker button
   useEffect(() => {
-    speak(NARRATION.defect_mount)
+    queue(NARRATION.defect_mount)
   }, [])
 
   // Fetch correlation on mount if not cached
@@ -72,7 +72,7 @@ export default function TheDefect() {
     const done = visibleLines >= allLines.length && allLines.length > 0
     if (done && !analysisDoneNarrated.current) {
       analysisDoneNarrated.current = true
-      speak(NARRATION.defect_analysis_done)
+      queue(NARRATION.defect_analysis_done)
     }
   }, [visibleLines, allLines.length])
 
@@ -325,6 +325,171 @@ export default function TheDefect() {
                   </div>
                 )}
               </div>
+            </section>
+
+            {/* NASA FMECA Methodology */}
+            <section className="space-y-6">
+
+              {/* Lineage header */}
+              <div className="bg-surface hairline-strong p-8">
+                <div className="font-mono text-eyebrow text-text-muted mb-3">METHODOLOGY · FMECA-LINEAGE</div>
+                <div className="grid grid-cols-12 gap-8">
+                  <div className="col-span-12 lg:col-span-7">
+                    <h2 className="font-display text-h-sm tracking-[-0.025em]">
+                      From Apollo to advanced packaging.
+                    </h2>
+                    <p className="mt-4 text-text-dim font-light text-sm leading-relaxed">
+                      FMECA — Failure Mode, Effects and Criticality Analysis — was formalised in MIL-P-1629 in 1949 and adopted
+                      by NASA for the Apollo program in 1966. Every mission from Viking to Galileo ran on it. CoWoS applies the
+                      same structured risk enumeration to chip packaging: enumerate every failure mode, score its criticality,
+                      and mitigate the highest-RPN items before they reach production.
+                    </p>
+                  </div>
+                  <div className="col-span-12 lg:col-span-5 flex gap-6 items-start pt-1">
+                    {[
+                      { label: 'STANDARD',  value: 'MIL-STD-1629A',    sub: 'canonical reference'       },
+                      { label: 'LINEAGE',   value: '1949 → 2024',      sub: 'MIL-P-1629 → SAE J1739'   },
+                      { label: 'NASA USE',  value: 'Apollo → Galileo', sub: 'every crewed mission'      },
+                    ].map(({ label, value, sub }) => (
+                      <div key={label} className="flex-1">
+                        <div className="font-mono text-eyebrow text-text-muted">{label}</div>
+                        <div className="font-mono text-mono-sm text-text mt-1">{value}</div>
+                        <div className="font-mono text-mono-xs text-text-muted mt-0.5">{sub}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 5-step process + 3 analysis levels */}
+              <div className="grid grid-cols-12 gap-6">
+                <div className="col-span-12 lg:col-span-8 bg-surface hairline-strong p-8">
+                  <div className="font-mono text-eyebrow text-text-muted mb-6">PROCESS · FIVE STEPS</div>
+                  <div className="space-y-px bg-rule">
+                    {[
+                      { n: '01', title: 'Define the system',    desc: 'Block diagram every component and its function across all packaging layers.' },
+                      { n: '02', title: 'List failure modes',   desc: 'Every way each component can fail — void, warp, short, contamination, CTE crack.' },
+                      { n: '03', title: 'Trace effects',        desc: 'Local effect → subsystem impact → mission/yield end effect for each failure mode.' },
+                      { n: '04', title: 'Score criticality',    desc: 'Severity × Occurrence × Detection = RPN. Threshold ≥ 100 triggers mandatory action.' },
+                      { n: '05', title: 'Mitigate and iterate', desc: 'Highest RPNs get design changes, process controls, or added inspection. Living document.' },
+                    ].map(({ n, title, desc }) => (
+                      <div key={n} className="bg-surface grid grid-cols-12 gap-4 p-5 items-start">
+                        <div className="col-span-1">
+                          <span className="font-mono text-mono-xs text-text-muted">{n}</span>
+                        </div>
+                        <div className="col-span-3">
+                          <span className="font-mono text-mono-sm text-text">{title}</span>
+                        </div>
+                        <div className="col-span-8">
+                          <span className="font-mono text-mono-xs text-text-dim">{desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="col-span-12 lg:col-span-4 bg-surface hairline-strong p-8">
+                  <div className="font-mono text-eyebrow text-text-muted mb-6">ANALYSIS · THREE LEVELS</div>
+                  <div className="space-y-6">
+                    {[
+                      { tag: 'FUNCTIONAL',    title: 'System-level',        desc: 'Treats subsystems as black boxes. Catches "if HBM stack 3 fails, what happens to compute throughput?"',          color: 'text-cyan',  badge: 'bg-cyan/10 border-cyan'  },
+                      { tag: 'DESIGN · DFMEA', title: 'Component-level',    desc: 'Every component and interface. Catches cross-component interactions like CTE mismatch — ideally before tape-out.', color: 'text-amber', badge: 'bg-amber/10 border-amber' },
+                      { tag: 'PROCESS · PFMEA', title: 'Manufacturing-level', desc: 'Every process step — lithography, CMP, etch, bonding, reflow. Where yield excursions live.',                    color: 'text-ok',    badge: 'bg-ok/10 border-ok'      },
+                    ].map(({ tag, title, desc, color, badge }) => (
+                      <div key={tag} className="pb-6 border-b border-rule last:border-0 last:pb-0">
+                        <div className={`inline-flex items-center hairline px-2 py-1 font-mono text-mono-xs ${badge} ${color} mb-3`}>
+                          {tag}
+                        </div>
+                        <div className="font-mono text-mono-sm text-text mb-1">{title}</div>
+                        <div className="font-mono text-mono-xs text-text-dim leading-relaxed">{desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Failure mode families table */}
+              <div className="bg-surface hairline-strong p-8">
+                <div className="font-mono text-eyebrow text-text-muted mb-6">TAXONOMY · FIVE FAILURE FAMILIES</div>
+                <h2 className="font-display text-h-sm tracking-[-0.025em] mb-8">
+                  Chip packaging failure modes, grouped NASA-style by mechanism.
+                </h2>
+                <div className="grid grid-cols-4 gap-px bg-rule">
+                  {['FAMILY', 'EXAMPLES', 'DETECTION METHOD', 'NASA SEVERITY'].map(col => (
+                    <div key={col} className="bg-surface-2 px-4 py-3 font-mono text-mono-xs text-text-muted">{col}</div>
+                  ))}
+                  {[
+                    { family: 'Mechanical',        fColor: 'text-danger', examples: 'Warp · delamination · die crack · bond tilt',          detection: 'Vision + acoustic microscopy',        severity: 'Critical',              sColor: 'text-danger' },
+                    { family: 'Interconnect',       fColor: 'text-danger', examples: 'Solder voids · bridging · opens · head-in-pillow',     detection: 'Vision + X-ray',                     severity: 'Critical',              sColor: 'text-danger' },
+                    { family: 'Material / Chemical', fColor: 'text-amber', examples: 'Contamination · oxidation · flux residue · moisture',  detection: 'Vision + spectroscopy',              severity: 'Marginal → Critical',   sColor: 'text-amber'  },
+                    { family: 'Thermal',            fColor: 'text-danger', examples: 'CTE mismatch · hotspot damage · reflow drift',         detection: 'Process telemetry + thermal imaging', severity: 'Critical',              sColor: 'text-danger' },
+                    { family: 'Electrical',         fColor: 'text-danger', examples: 'Opens · shorts · leakage · parametric drift',          detection: 'Electrical test',                    severity: 'Critical → Catastrophic', sColor: 'text-danger' },
+                  ].flatMap(({ family, fColor, examples, detection, severity, sColor }) => [
+                    <div key={`${family}-f`} className={`bg-surface px-4 py-4 font-mono text-mono-sm ${fColor}`}>{family}</div>,
+                    <div key={`${family}-e`} className="bg-surface px-4 py-4 font-mono text-mono-xs text-text-dim">{examples}</div>,
+                    <div key={`${family}-d`} className="bg-surface px-4 py-4 font-mono text-mono-xs text-text-dim">{detection}</div>,
+                    <div key={`${family}-s`} className={`bg-surface px-4 py-4 font-mono text-mono-xs ${sColor}`}>{severity}</div>,
+                  ])}
+                </div>
+              </div>
+
+              {/* Worked example — Blackwell CTE */}
+              <div className="bg-surface hairline-strong p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="font-mono text-eyebrow text-text-muted">WORKED EXAMPLE · BLACKWELL CTE FAILURE</div>
+                  <span className="bg-danger/10 hairline border-danger px-3 py-1.5 font-mono text-mono-xs text-danger">RPN 252 · MANDATORY ACTION</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-px bg-rule mb-6">
+                  {[
+                    { field: 'ITEM',           value: 'LSI bridge / RDL interposer interface'                                                    },
+                    { field: 'FUNCTION',       value: '10 TB/s die-to-die data transfer'                                                        },
+                    { field: 'FAILURE MODE',   value: 'Mechanical warp from CTE mismatch'                                                       },
+                    { field: 'FAILURE CAUSE',  value: 'Differential thermal expansion: GPU die vs bridge vs interposer vs substrate'             },
+                    { field: 'LOCAL EFFECT',   value: 'Micro-bump crack, broken interconnect'                                                   },
+                    { field: 'SYSTEM EFFECT',  value: 'Package fails electrical test, yield drops'                                              },
+                    { field: 'MISSION EFFECT', value: 'Shipment slip, customer SLA miss'                                                        },
+                    { field: 'MITIGATION',     value: 'Modify top metal layers and bumps, new mask set, CTE-matched substrate'                  },
+                  ].map(({ field, value }) => (
+                    <div key={field} className="bg-surface px-5 py-4 flex gap-4 items-start">
+                      <span className="font-mono text-mono-xs text-text-muted shrink-0 w-32">{field}</span>
+                      <span className="font-mono text-mono-xs text-text-dim">{value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-3 gap-px bg-rule">
+                  {[
+                    { label: 'SEVERITY',   value: 9, color: 'text-danger', bar: 'bg-danger', note: 'Package-level loss'       },
+                    { label: 'OCCURRENCE', value: 7, color: 'text-amber',  bar: 'bg-amber',  note: 'Early Blackwell ramp'     },
+                    { label: 'DETECTION',  value: 4, color: 'text-cyan',   bar: 'bg-cyan',   note: 'Caught at electrical test' },
+                  ].map(({ label, value, color, bar, note }) => (
+                    <div key={label} className="bg-surface p-5">
+                      <div className="font-mono text-eyebrow text-text-muted mb-3">{label}</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className={`font-display text-h-md ${color}`}>{value}</span>
+                        <span className="font-mono text-mono-sm text-text-muted">/ 10</span>
+                      </div>
+                      <div className="mt-3 h-px w-full bg-rule overflow-hidden">
+                        <div className={`h-full ${bar}`} style={{ width: `${value * 10}%` }} />
+                      </div>
+                      <div className="font-mono text-mono-xs text-text-muted mt-2">{note}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-rule">
+                  <div className="font-mono text-eyebrow text-text-muted mb-3">WHAT DFMEA SHOULD HAVE CAUGHT</div>
+                  <p className="font-mono text-mono-xs text-text-dim leading-relaxed max-w-4xl">
+                    The Blackwell CTE warp episode is a textbook DFMEA case. A mismatch between four bonded layers — die,
+                    bridge, interposer, substrate — is exactly the cross-component interaction a properly-run Design FMECA
+                    should flag during design review, before mask costs and ramp delays. The fact that it shipped anyway
+                    suggests the FMECA process either missed it or didn't escalate it. CoWoS closes that gap by automating
+                    criticality scoring and pattern detection, producing an audit-ready FMECA report in minutes, not days.
+                  </p>
+                </div>
+              </div>
+
             </section>
 
           </div>

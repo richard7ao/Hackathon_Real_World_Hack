@@ -114,17 +114,17 @@ function WaferUploadZone({ onAnalyzing, onDone }) {
   const [dragging, setDragging] = useState(false)
   const [status, setStatus]     = useState(null) // null | 'classifying' | 'enriching'
   const inputRef = useRef(null)
-  const { speak } = useNarrator()
+  const { queue } = useNarrator()
 
   async function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return
     setStatus('classifying')
     onAnalyzing()
-    speak(NARRATION.line_classifying)
+    queue(NARRATION.line_classifying)
     try {
       const classified = await classifyWafer(file)
       setStatus('enriching')
-      speak(NARRATION.line_enriching)
+      queue(NARRATION.line_enriching)
       const enrichment = await enrich(classified.image_id, classified.defect_pattern, classified.confidence)
       onDone({ imageId: classified.image_id, defectPattern: classified.defect_pattern, confidence: classified.confidence, enrichment })
     } finally {
@@ -195,7 +195,7 @@ function WaferUploadZone({ onAnalyzing, onDone }) {
 export default function TheLine() {
   const navigate    = useNavigate()
   const { update }  = useAnalysis()
-  const { speak }   = useNarrator()
+  const { speak, queue } = useNarrator()
   const [selected, setSelected] = useState('STG-04')
   const [showModal, setShowModal] = useState(false)
   const fleetYield  = useFleet()
@@ -206,20 +206,20 @@ export default function TheLine() {
   const stageDebounceRef = useRef(null)
   const mountedRef  = useRef(false)
 
-  // Narrate on mount
+  // Queue mount narration — speaker button plays it on demand
   useEffect(() => {
-    speak(NARRATION.line_mount)
+    queue(NARRATION.line_mount)
     mountedRef.current = true
   }, [])
 
-  // Narrate on stage change — debounced so rapid clicks don't spam
+  // Queue stage narration on change — speaker button always has current stage ready
   useEffect(() => {
     if (!mountedRef.current) return
     clearTimeout(stageDebounceRef.current)
     stageDebounceRef.current = setTimeout(() => {
-      if (stage.status === 'error') speak(NARRATION.line_stage_critical)
-      else if (stage.status === 'warn') speak(NARRATION.line_stage_warn)
-      else speak(NARRATION.line_stage_ok(stage))
+      if (stage.status === 'error') queue(NARRATION.line_stage_critical)
+      else if (stage.status === 'warn') queue(NARRATION.line_stage_warn)
+      else queue(NARRATION.line_stage_ok(stage))
     }, 450)
     return () => clearTimeout(stageDebounceRef.current)
   }, [selected])

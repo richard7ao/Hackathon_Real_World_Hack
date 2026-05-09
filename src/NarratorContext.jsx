@@ -78,23 +78,14 @@ export function NarratorProvider({ children }) {
 
   speakRef.current = speak
 
-  // Replay pending narration on the very first user interaction anywhere on the page.
-  // Browsers block audio.play() until a gesture has occurred — this catches that case.
-  useEffect(() => {
-    function onFirstInteraction() {
-      if (pendingRef.current) speakRef.current(pendingRef.current)
-      document.removeEventListener('click',   onFirstInteraction)
-      document.removeEventListener('keydown', onFirstInteraction)
-    }
-    document.addEventListener('click',   onFirstInteraction)
-    document.addEventListener('keydown', onFirstInteraction)
-    return () => {
-      document.removeEventListener('click',   onFirstInteraction)
-      document.removeEventListener('keydown', onFirstInteraction)
-    }
+  // Queue text for the speaker button without playing — pages call this on mount/events
+  // so the button always has something ready, but audio never starts automatically.
+  const queue = useCallback((text) => {
+    if (!text) return
+    pendingRef.current = text
   }, [])
 
-  // Button handler: speaking → stop; idle → replay last narration
+  // Button handler: speaking → stop; idle → play queued narration
   const toggle = useCallback(() => {
     if (speaking) {
       stopAudio()
@@ -104,7 +95,7 @@ export function NarratorProvider({ children }) {
   }, [speaking, speak])
 
   return (
-    <NarratorCtx.Provider value={{ speak, stop: stopAudio, toggle, speaking }}>
+    <NarratorCtx.Provider value={{ speak, queue, stop: stopAudio, toggle, speaking }}>
       {children}
     </NarratorCtx.Provider>
   )
