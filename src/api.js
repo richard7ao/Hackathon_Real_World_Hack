@@ -1,12 +1,34 @@
 const BASE       = import.meta.env.VITE_API_BASE_URL   ?? 'http://localhost:8000'
 const CLASSIFIER = import.meta.env.VITE_CLASSIFIER_URL ?? 'http://localhost:8001'
 
+// In production-style demo mode, we want to FAIL LOUDLY rather than silently
+// drop into mock responses. Set VITE_ALLOW_MOCK_FALLBACK=1 for offline dev.
+const ALLOW_MOCK = import.meta.env.VITE_ALLOW_MOCK_FALLBACK === '1'
+
+function mockOrThrow(label, mock, error) {
+  if (ALLOW_MOCK) {
+    console.warn(`[api] ${label} backend unreachable (${error?.message ?? error}); using mock`)
+    return mock
+  }
+  console.error(`[api] ${label} backend unreachable (${error?.message ?? error})`)
+  throw error
+}
+
 async function post(path, body) {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`${res.status} ${text}`)
+  }
+  return res.json()
+}
+
+export async function getBatches(limit = 200) {
+  const res = await fetch(`${BASE}/batches?limit=${limit}`)
   if (!res.ok) throw new Error(res.status)
   return res.json()
 }
@@ -131,9 +153,20 @@ export async function classifyWafer(imageFile) {
     const res = await fetch(`${CLASSIFIER}/classify`, { method: 'POST', body: form })
     if (!res.ok) throw new Error(res.status)
     return res.json()
-  } catch {
-    return MOCK_CLASSIFY
+  } catch (e) {
+    return mockOrThrow('classify', MOCK_CLASSIFY, e)
   }
+}
+
+export async function classifyWaferByUrl(imageUrl, displayName) {
+  // Used by the live monitor stream — fetches a wafer image hosted by Vite
+  // (data/WM811k_Dataset/...) and forwards it to the classifier service.
+  const blob = await fetch(imageUrl).then(r => {
+    if (!r.ok) throw new Error(`fetch ${imageUrl} -> ${r.status}`)
+    return r.blob()
+  })
+  const file = new File([blob], displayName ?? 'wafer.jpg', { type: blob.type || 'image/jpeg' })
+  return classifyWafer(file)
 }
 
 export async function enrich(imageId, defectPattern, confidence) {
@@ -144,24 +177,24 @@ export async function enrich(imageId, defectPattern, confidence) {
       confidence,
       target_market: 'aerospace_class3',
     })
-  } catch {
-    return { ...MOCK_ENRICH, image_id: imageId }
+  } catch (e) {
+    return mockOrThrow('enrich', { ...MOCK_ENRICH, image_id: imageId }, e)
   }
 }
 
 export async function correlate(defectPattern) {
   try {
     return await post('/correlate', { target_defect: defectPattern, lookback_batches: 50 })
-  } catch {
-    return { ...MOCK_CORRELATE, target_defect: defectPattern }
+  } catch (e) {
+    return mockOrThrow('correlate', { ...MOCK_CORRELATE, target_defect: defectPattern }, e)
   }
 }
 
 export async function fixAndVerify(defectPattern) {
   try {
     return await post('/fix-and-verify', { target_defect: defectPattern })
-  } catch {
-    return MOCK_FIX
+  } catch (e) {
+    return mockOrThrow('fix-and-verify', MOCK_FIX, e)
   }
 }
 

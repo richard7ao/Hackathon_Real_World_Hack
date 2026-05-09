@@ -27,7 +27,7 @@ function useScrap(initial = 12405.89) {
 
 export default function TheDefect() {
   const navigate = useNavigate()
-  const { defectPattern, enrichment, correlation: cachedCorrelation, update } = useAnalysis()
+  const { defectPattern, enrichment, correlation: cachedCorrelation, imagePreviewUrl, update } = useAnalysis()
   const { speak, queue } = useNarrator()
   const [showDiag, setShowDiag] = useState(false)
   const [correlation, setCorrelation] = useState(cachedCorrelation)
@@ -168,6 +168,22 @@ export default function TheDefect() {
             >
               <span className="tick-tr" /><span className="tick-bl" />
 
+              {/* Uploaded wafer image — fills the analysis frame so the user
+                  sees the real artefact under the synthetic overlays. */}
+              {imagePreviewUrl && (
+                <>
+                  <div
+                    className="absolute inset-0 bg-ink"
+                    aria-hidden="true"
+                  />
+                  <img
+                    src={imagePreviewUrl}
+                    alt={`Uploaded wafer map (${label})`}
+                    className="absolute inset-0 m-auto h-full w-full object-contain p-10 opacity-95"
+                  />
+                </>
+              )}
+
               <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
                 <span className="bg-danger/10 hairline border-danger px-3 py-1.5 font-mono text-mono-xs text-danger">
                   STG-04 · CRITICAL
@@ -180,7 +196,12 @@ export default function TheDefect() {
                 REF · {enrichment?.image_id?.toUpperCase() ?? 'A247293C3'}
               </div>
 
-              <svg width="100%" height="100%" className="absolute inset-0 opacity-50" aria-hidden="true">
+              <svg
+                width="100%"
+                height="100%"
+                className={`absolute inset-0 ${imagePreviewUrl ? 'opacity-25' : 'opacity-50'}`}
+                aria-hidden="true"
+              >
                 <defs>
                   <pattern id="circuit" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
                     <rect width="80" height="80" fill="none" />

@@ -69,11 +69,18 @@ class WaferDataset(Dataset):
             label = row["label"]
             if label not in LABEL_TO_IDX:
                 continue
+
+            label_hash = row.get("label_hash")
+            label_hash = "" if not isinstance(label_hash, str) else label_hash
+            filename = row.get("filename") or ""
+
             candidates = [
                 row.get("local_path"),
-                IMAGE_DIR / str(row.get("filename", "")),
-                IMAGE_DIR / f"{row['label_hash'][:8]}_{row['filename']}",
+                IMAGE_DIR / str(filename),
             ]
+            if label_hash and filename:
+                candidates.append(IMAGE_DIR / f"{label_hash[:8]}_{filename}")
+
             for path in candidates:
                 if path and Path(path).exists():
                     self.records.append((str(path), LABEL_TO_IDX[label]))

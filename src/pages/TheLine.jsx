@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import DiagnosticModal from '../components/DiagnosticModal'
+import LiveMonitor from '../components/LiveMonitor'
+import BatchRunner from '../components/BatchRunner'
 import { classifyWafer, enrich } from '../api'
 import { useAnalysis } from '../AnalysisContext'
 import { useNarrator } from '../NarratorContext'
@@ -113,20 +115,29 @@ function StageNode({ stage, isSelected, onClick, idx }) {
 function WaferUploadZone({ onAnalyzing, onDone }) {
   const [dragging, setDragging] = useState(false)
   const [status, setStatus]     = useState(null) // null | 'classifying' | 'enriching'
+  const [previewUrl, setPreviewUrl] = useState(null)
   const inputRef = useRef(null)
   const { queue } = useNarrator()
 
   async function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return
     setStatus('classifying')
-    onAnalyzing()
+    const imagePreviewUrl = URL.createObjectURL(file)
+    setPreviewUrl(imagePreviewUrl)
+    onAnalyzing({ imagePreviewUrl })
     queue(NARRATION.line_classifying)
     try {
       const classified = await classifyWafer(file)
       setStatus('enriching')
       queue(NARRATION.line_enriching)
       const enrichment = await enrich(classified.image_id, classified.defect_pattern, classified.confidence)
-      onDone({ imageId: classified.image_id, defectPattern: classified.defect_pattern, confidence: classified.confidence, enrichment })
+      onDone({
+        imageId: classified.image_id,
+        defectPattern: classified.defect_pattern,
+        confidence: classified.confidence,
+        enrichment,
+        imagePreviewUrl,
+      })
     } finally {
       setStatus(null)
     }
@@ -142,49 +153,64 @@ function WaferUploadZone({ onAnalyzing, onDone }) {
         <span className="font-mono text-mono-xs text-text-muted">drop an image to begin</span>
       </div>
 
-      <div
-        onDragOver={e => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]) }}
-        onClick={() => !loading && inputRef.current?.click()}
-        role="button"
-        tabIndex={0}
-        aria-label="Upload wafer map image for analysis"
-        onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && !loading && inputRef.current?.click()}
-        className={`relative h-28 flex items-center justify-center transition-all duration-200 cursor-pointer
-          ${dragging
-            ? 'hairline !border-cyan bg-cyan/5'
-            : loading
-              ? 'hairline bg-surface-2/40'
-              : 'border border-dashed border-rule hover:border-cyan/60 hover:bg-surface-2/30'
-          }`}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={e => handleFile(e.target.files[0])}
-        />
+      <div className="grid grid-cols-12 gap-4">
+        <div
+          onDragOver={e => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]) }}
+          onClick={() => !loading && inputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload wafer map image for analysis"
+          onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && !loading && inputRef.current?.click()}
+          className={`relative col-span-12 ${previewUrl ? 'md:col-span-8' : ''} h-28 flex items-center justify-center transition-all duration-200 cursor-pointer
+            ${dragging
+              ? 'hairline !border-cyan bg-cyan/5'
+              : loading
+                ? 'hairline bg-surface-2/40'
+                : 'border border-dashed border-rule hover:border-cyan/60 hover:bg-surface-2/30'
+            }`}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => handleFile(e.target.files[0])}
+          />
 
-        {loading ? (
-          <div className="flex items-center gap-3 font-mono text-mono-sm text-cyan">
-            <span className="w-2 h-2 bg-cyan rounded-full animate-ping" aria-hidden="true" />
-            {status === 'classifying'
-              ? 'Hugo: classifying defect pattern…'
-              : 'Hugo: running FMECA assessment…'}
-          </div>
-        ) : (
-          <div className="flex items-center gap-5 text-text-muted select-none">
-            <span className="material-symbols-outlined text-[36px]" aria-hidden="true">upload_file</span>
-            <div>
-              <div className="font-display text-[17px] text-text tracking-[-0.015em]">
-                Feed a wafer map image
-              </div>
-              <div className="font-mono text-mono-xs mt-1">
-                jpg · png · tiff — drag &amp; drop or click
+          {loading ? (
+            <div className="flex items-center gap-3 font-mono text-mono-sm text-cyan">
+              <span className="w-2 h-2 bg-cyan rounded-full animate-ping" aria-hidden="true" />
+              {status === 'classifying'
+                ? 'Hugo: classifying defect pattern…'
+                : 'Hugo: running FMECA assessment…'}
+            </div>
+          ) : (
+            <div className="flex items-center gap-5 text-text-muted select-none">
+              <span className="material-symbols-outlined text-[36px]" aria-hidden="true">upload_file</span>
+              <div>
+                <div className="font-display text-[17px] text-text tracking-[-0.015em]">
+                  {previewUrl ? 'Drop another wafer map' : 'Feed a wafer map image'}
+                </div>
+                <div className="font-mono text-mono-xs mt-1">
+                  jpg · png · tiff — drag &amp; drop or click
+                </div>
               </div>
             </div>
+          )}
+        </div>
+
+        {previewUrl && (
+          <div className="col-span-12 md:col-span-4 relative h-28 bg-ink hairline overflow-hidden">
+            <img
+              src={previewUrl}
+              alt="Uploaded wafer map preview"
+              className="absolute inset-0 m-auto h-full w-full object-contain p-2"
+            />
+            <span className="absolute top-1 left-1 font-mono text-mono-xs text-cyan/80 bg-ink/70 px-1.5 py-0.5">
+              PREVIEW
+            </span>
           </div>
         )}
       </div>
@@ -199,9 +225,27 @@ export default function TheLine() {
   const [selected, setSelected] = useState('STG-04')
   const [showModal, setShowModal] = useState(false)
   const fleetYield  = useFleet()
-  const stage       = STAGES.find(s => s.id === selected)
+
+  // Stage-map state is driven by the live monitor: when a defect fires,
+  // STG-04 (CoW bonding) flips to critical with the live RPN; when only
+  // pass wafers stream through, the entire fleet shows nominal.
+  const [liveStages, setLiveStages] = useState(STAGES.map(s => ({ ...s, status: 'ok' })))
+  const [liveDefect, setLiveDefect] = useState(null)
+
+  function handleMonitorDefect(event) {
+    setLiveDefect(event)
+    setLiveStages(prev =>
+      prev.map(s =>
+        s.id === 'STG-04'
+          ? { ...s, status: 'error', yield: Math.max(60, 100 - (event.rpn ?? 50) / 4) }
+          : s
+      )
+    )
+  }
+
+  const stage       = liveStages.find(s => s.id === selected) ?? liveStages[0]
   const term        = TERMINAL[selected] ?? TERMINAL.default
-  const errorCount  = STAGES.filter(s => s.status === 'error').length
+  const errorCount  = liveStages.filter(s => s.status === 'error').length
   const warnCount   = STAGES.filter(s => s.status === 'warn').length
   const stageDebounceRef = useRef(null)
   const mountedRef  = useRef(false)
@@ -224,8 +268,12 @@ export default function TheLine() {
     return () => clearTimeout(stageDebounceRef.current)
   }, [selected])
 
-  function handleAnalyzeDone({ imageId, defectPattern, confidence, enrichment }) {
-    update({ imageId, defectPattern, confidence, enrichment, correlation: null, fixResult: null })
+  function handleAnalyzeStart({ imagePreviewUrl }) {
+    update({ imagePreviewUrl })
+  }
+
+  function handleAnalyzeDone({ imageId, defectPattern, confidence, enrichment, imagePreviewUrl }) {
+    update({ imageId, defectPattern, confidence, enrichment, imagePreviewUrl, correlation: null, fixResult: null })
     navigate('/defect')
   }
 
@@ -289,6 +337,32 @@ export default function TheLine() {
               </div>
             </header>
 
+            {/* Inspection batch — runs the latest hour of wafers through the
+                model, ranks defects by RPN, maps them to NASA standards, and
+                pinpoints the responsible production stage. */}
+            <div className="mb-8">
+              <div className="flex items-center gap-4 mb-4">
+                <span className="font-mono text-eyebrow text-cyan">/ INSPECTION BATCH</span>
+                <div className="flex-1 h-px bg-rule" />
+                <span className="font-mono text-mono-xs text-text-muted">
+                  cowos-station-a42 · last hour · auto-graded
+                </span>
+              </div>
+              <BatchRunner onTopDefect={handleMonitorDefect} />
+            </div>
+
+            {/* Continuous inline inspection feed. */}
+            <div className="mb-12">
+              <div className="flex items-center gap-4 mb-4">
+                <span className="font-mono text-eyebrow text-cyan">/ INLINE INSPECTION</span>
+                <div className="flex-1 h-px bg-rule" />
+                <span className="font-mono text-mono-xs text-text-muted">
+                  every wafer · every shift · every station
+                </span>
+              </div>
+              <LiveMonitor onDefect={handleMonitorDefect} />
+            </div>
+
             <div className="flex items-center gap-4 mb-6">
               <span className="font-mono text-eyebrow text-text-muted">/ STAGE MAP</span>
               <div className="flex-1 h-px bg-rule" />
@@ -298,7 +372,7 @@ export default function TheLine() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-12">
-              {STAGES.map((s, i) => (
+              {liveStages.map((s, i) => (
                 <StageNode
                   key={s.id}
                   stage={s}
@@ -310,7 +384,7 @@ export default function TheLine() {
             </div>
 
             <WaferUploadZone
-              onAnalyzing={() => {}}
+              onAnalyzing={handleAnalyzeStart}
               onDone={handleAnalyzeDone}
             />
 

@@ -10,6 +10,227 @@ import { NARRATION } from '../narration'
 
 const TERM_COLOR = { cmd: 'text-text-dim', ok: 'text-ok', ai: 'text-cyan' }
 
+// Map FMECA-defined responsible_equipment -> human-readable equipment + the
+// specific process parameter that's being adjusted on it.
+const EQUIPMENT_DETAIL = {
+  wafer_chuck:            { name: 'Wafer chuck',          stage: 'STG-01 wafer in',          param: 'chuck temperature uniformity', unit: '°C' },
+  spin_coater:            { name: 'Spin coater',          stage: 'STG-02 bumping',           param: 'PEB hotplate uniformity',      unit: '°C' },
+  edge_bead_remover:      { name: 'Edge bead remover',    stage: 'STG-02 bumping',           param: 'solvent dispense pressure',    unit: 'kPa' },
+  plasma_etcher:          { name: 'Plasma etcher',        stage: 'STG-04 cow bonding',       param: 'reflow zone 3 setpoint',       unit: '°C' },
+  cleanroom_environment:  { name: 'Cleanroom environment',stage: 'STG-03 interposer',        param: 'particle count (>0.3μm/m³)',   unit: '#'  },
+  wafer_handler_robot:    { name: 'Wafer handler',        stage: 'STG-01 wafer in',          param: 'end-effector pad wear',        unit: 'μm' },
+  process_control_system: { name: 'Process control',      stage: 'STG-04 cow bonding',       param: 'recipe ID checksum',           unit: ''   },
+  general_process:        { name: 'General process',      stage: 'STG-08 final test',        param: 'baseline yield drift',         unit: '%'  },
+}
+
+// Parse "Reduce reflow zone 3 setpoint on M3: 244°C -> 240°C" -> {from, to, unit}
+function parseAdjustment(text) {
+  if (!text) return null
+  const m = text.match(/(\d+(?:\.\d+)?)\s*°?([CF])?\s*(?:->|→|to)\s*(\d+(?:\.\d+)?)\s*°?([CF])?/i)
+  if (!m) return null
+  return { from: parseFloat(m[1]), to: parseFloat(m[3]), unit: (m[2] || m[4] || '°C').replace(/^[°]?/, '°') }
+}
+
+function CorrectiveActionDiagram({ imagePreviewUrl, defectPattern, enrichment, fixResult, onBack }) {
+  const assess  = enrichment?.assessment
+  const diag    = assess?.diagnosis
+  const equip   = diag?.responsible_equipment
+  const detail  = equip ? EQUIPMENT_DETAIL[equip] : null
+  const v       = fixResult?.verification
+  const action  = v?.action_applied
+  const machine = fixResult?.correlation?.llm_analysis?.cluster_fingerprint?.primary_machine ?? 'M3'
+  const shift   = fixResult?.correlation?.llm_analysis?.cluster_fingerprint?.primary_shift   ?? 'afternoon'
+  const adj     = parseAdjustment(action?.specific_adjustment)
+
+  const wafersPassed = v?.verification_batch?.wafers_passed ?? 23
+  const wafersTotal  = v?.verification_batch?.wafer_count   ?? 24
+  const batchId      = v?.verification_batch?.batch_id      ?? 'B-2422'
+  const rateBefore   = (v?.defect_rate_before ?? 0.165) * 100
+  const rateAfter    = (v?.defect_rate_after  ?? 0.031) * 100
+
+  const stamps = [
+    { label: 'MIL-STD-1629A', value: assess?.fmeca?.mil_std_1629a_category ?? 'II — Critical' },
+    { label: 'IPC-A-610J',    value: `cls 3 ${(assess?.ipc_a_610?.class_3_outcome ?? 'FAIL').replace(/_/g, ' ').toLowerCase()}` },
+    { label: 'JEDEC',         value: (assess?.jedec?.impact ?? '').split('—')[0].trim() || 'JESD22' },
+  ]
+
+  return (
+    <div className="col-span-12 lg:col-span-7 relative bg-surface hairline-strong overflow-hidden corner-ticks min-h-[640px] flex flex-col">
+      <span className="tick-tr" /><span className="tick-bl" />
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-rule bg-surface-2/40 shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-eyebrow text-cyan tracking-[0.18em]">
+            CORRECTIVE ACTION
+          </span>
+          <span className="font-mono text-mono-xs text-text-muted">
+            {detail?.stage ?? 'STG-04 cow bonding'} · machine {machine} · {shift} shift
+          </span>
+        </div>
+        <span className="font-mono text-mono-xs text-text-muted">
+          ref · {assess?.defect_pattern ?? defectPattern}
+        </span>
+      </div>
+
+      {/* Defect wafer + equipment + adjustment */}
+      <div className="grid grid-cols-12 gap-0 border-b border-rule">
+        {/* Defect wafer panel */}
+        <div className="col-span-12 md:col-span-5 relative bg-ink min-h-[260px] flex items-center justify-center p-6 border-r border-rule">
+          {imagePreviewUrl ? (
+            <img
+              src={imagePreviewUrl}
+              alt={`Defect wafer · ${defectPattern}`}
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : (
+            <div className="text-bg/40 font-mono text-mono-xs">no wafer captured</div>
+          )}
+          <div className="absolute top-3 left-3 flex items-center gap-2">
+            <span className="bg-danger text-white font-mono text-mono-xs px-2 py-0.5 uppercase tracking-[0.18em]">
+              defect
+            </span>
+            <span className="font-mono text-mono-xs text-bg/70">
+              {assess?.human_label ?? defectPattern}
+            </span>
+          </div>
+          <div className="absolute bottom-3 left-3 right-3 font-mono text-mono-xs text-bg/70 leading-snug">
+            {diag?.likely_root_cause ?? 'Plasma etch non-uniformity or chamber edge effect'}
+          </div>
+        </div>
+
+        {/* Equipment + parameter delta */}
+        <div className="col-span-12 md:col-span-7 p-6 flex flex-col gap-5">
+          <div>
+            <div className="font-mono text-eyebrow text-text-muted mb-2 tracking-[0.18em]">
+              SOURCE EQUIPMENT
+            </div>
+            <div className="flex items-baseline gap-3">
+              <div className="font-display text-h-sm tracking-[-0.025em] text-text">
+                {detail?.name ?? 'Plasma etcher'}
+              </div>
+              <div className="font-mono text-mono-xs text-cyan bg-cyan/10 hairline px-2 py-0.5">
+                {machine}
+              </div>
+            </div>
+            <div className="mt-1 font-mono text-mono-xs text-text-muted">
+              {detail?.stage ?? 'STG-04 cow bonding'} · process variable: {diag?.process_variable_to_investigate ?? '—'}
+            </div>
+          </div>
+
+          <div className="hairline p-4">
+            <div className="font-mono text-eyebrow text-text-muted mb-3 tracking-[0.18em]">
+              PARAMETER ADJUSTMENT
+            </div>
+            <div className="font-mono text-mono-sm text-text-dim mb-3">
+              {detail?.param ?? action?.specific_adjustment ?? 'reflow zone 3 setpoint'}
+            </div>
+            {adj ? (
+              <div className="flex items-end gap-4">
+                <div className="flex-1">
+                  <div className="font-mono text-eyebrow text-text-muted mb-1">CURRENT</div>
+                  <div className="font-display text-[28px] text-danger tabular-nums leading-none">
+                    {adj.from.toFixed(1)}<span className="text-[14px] text-text-muted ml-1">{detail?.unit ?? adj.unit}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center pb-2">
+                  <span className="material-symbols-outlined text-cyan text-[20px]" aria-hidden="true">arrow_forward</span>
+                </div>
+                <div className="flex-1 text-right">
+                  <div className="font-mono text-eyebrow text-text-muted mb-1">TARGET</div>
+                  <div className="font-display text-[28px] text-cyan tabular-nums leading-none">
+                    {adj.to.toFixed(1)}<span className="text-[14px] text-text-muted ml-1">{detail?.unit ?? adj.unit}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="font-mono text-mono-xs text-text-dim">
+                {action?.specific_adjustment ?? diag?.typical_corrective_action ?? 'Recalibration scheduled.'}
+              </div>
+            )}
+            {adj && (
+              <div className="mt-3">
+                <div className="h-1 bg-rule overflow-hidden">
+                  <div
+                    className="h-full bg-cyan transition-all duration-700"
+                    style={{
+                      width: `${Math.min(100, Math.abs((adj.from - adj.to) / Math.max(adj.from, 1)) * 1500)}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1 font-mono text-mono-xs text-text-muted">
+                  <span>delta {(adj.from - adj.to).toFixed(1)}{detail?.unit ?? adj.unit}</span>
+                  <span>tolerance ±1.5{detail?.unit ?? adj.unit}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Verification batch */}
+      <div className="px-6 py-5 border-b border-rule">
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-mono text-eyebrow text-text-muted tracking-[0.18em]">
+            VERIFICATION BATCH · {batchId}
+          </div>
+          <div className="font-mono text-mono-xs">
+            <span className="text-text-muted">defect rate</span>{' '}
+            <span className="text-danger tabular-nums">{rateBefore.toFixed(1)}%</span>{' '}
+            <span className="text-text-muted">→</span>{' '}
+            <span className="text-cyan tabular-nums">{rateAfter.toFixed(1)}%</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-12 gap-1">
+          {Array.from({ length: wafersTotal }).map((_, i) => {
+            const passed = i < wafersPassed
+            return (
+              <div
+                key={i}
+                className={`aspect-square hairline ${
+                  passed ? 'border-ok bg-ok/10' : 'border-danger bg-danger/15'
+                }`}
+                title={passed ? 'pass' : 'defect'}
+              />
+            )
+          })}
+        </div>
+        <div className="mt-3 flex items-center justify-between font-mono text-mono-xs text-text-muted">
+          <span>
+            {wafersPassed} pass · {wafersTotal - wafersPassed} defect · {wafersTotal} wafers
+          </span>
+          {v?.fix_verified ? (
+            <span className="text-ok flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]" aria-hidden="true">verified</span>
+              fix verified · MIL-STD-1629A §5.4.2
+            </span>
+          ) : (
+            <span className="text-amber">awaiting verification window</span>
+          )}
+        </div>
+      </div>
+
+      {/* Standards stamps */}
+      <div className="px-6 py-4 flex items-center gap-2 flex-wrap mt-auto">
+        {stamps.map((s) => (
+          <div key={s.label} className="hairline px-3 py-1.5 bg-surface-2/40">
+            <div className="font-mono text-eyebrow text-text-muted tracking-[0.18em]">
+              {s.label}
+            </div>
+            <div className="font-mono text-mono-xs text-text-dim mt-0.5">{s.value}</div>
+          </div>
+        ))}
+        <button
+          onClick={onBack}
+          className="ml-auto font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim hover:text-cyan px-3 py-1.5"
+        >
+          ← back to defect
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ReportModal({ onClose, fixResult, defectPattern, enrichment }) {
   const closeRef = useRef(null)
   const [downloading, setDownloading] = useState(false)
@@ -185,12 +406,11 @@ function ReportModal({ onClose, fixResult, defectPattern, enrichment }) {
 
 export default function TheFix() {
   const navigate  = useNavigate()
-  const { defectPattern, enrichment, fixResult: cachedFix, update } = useAnalysis()
+  const { defectPattern, enrichment, fixResult: cachedFix, imagePreviewUrl, update } = useAnalysis()
   const { speak, queue } = useNarrator()
   const [showDiag, setShowDiag]     = useState(false)
   const [showReport, setShowReport] = useState(false)
   const [fixResult, setFixResult]   = useState(cachedFix)
-  const [zoom, setZoom]             = useState(1)
   const [visibleLines, setVisibleLines] = useState(0)
   const verifiedNarrated = useRef(false)
 
@@ -367,85 +587,13 @@ export default function TheFix() {
                 </div>
               </div>
 
-              <div className="col-span-12 lg:col-span-7 relative bg-surface hairline-strong overflow-hidden corner-ticks min-h-[640px]">
-                <span className="tick-tr" /><span className="tick-bl" />
-
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-                  <span className="font-mono text-mono-xs text-text-dim bg-surface-2 hairline px-3 py-1.5">
-                    schematic · STG-04
-                  </span>
-                </div>
-                <div className="absolute top-4 right-4 z-20 font-mono text-mono-xs text-text-muted">
-                  ZOOM · {Math.round(zoom * 100)}%
-                </div>
-
-                <div
-                  className="absolute inset-0 dot-grid transition-transform duration-500"
-                  style={{ transform: `scale(${zoom})` }}
-                >
-                  <div className="absolute inset-[12%] hairline border-cyan/30" />
-                  <div className="absolute inset-[12%] grid grid-cols-4 grid-rows-4 pointer-events-none">
-                    {Array.from({ length: 16 }).map((_, i) => (
-                      <div key={i} className="border-r border-b border-rule-soft" />
-                    ))}
-                  </div>
-
-                  <div className="absolute" style={{ top: '38%', left: '28%' }}>
-                    <div className="relative w-[260px] h-[170px] hairline border-cyan bg-cyan/5">
-                      <span className="absolute -top-7 left-0 bg-cyan text-white font-mono text-mono-xs px-2 py-1">
-                        {defectPattern} · primary
-                      </span>
-                      <span className="absolute -right-3 top-1/2 w-6 h-px bg-cyan" />
-                      <span className="absolute font-mono text-mono-xs text-cyan" style={{ left: 'calc(100% + 16px)', top: 'calc(50% - 8px)' }}>
-                        critical point
-                      </span>
-                      <span className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan" />
-                      <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-cyan" />
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-cyan" />
-                    </div>
-                  </div>
-
-                  <div className="absolute" style={{ top: '20%', right: '20%' }}>
-                    <div className="relative w-[120px] h-[120px] hairline border-amber/60 bg-amber/5">
-                      <span className="absolute -top-6 left-0 font-mono text-mono-xs text-amber">
-                        {fixResult?.correlation?.llm_analysis?.cluster_fingerprint?.primary_machine ?? 'M3'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="absolute" style={{ bottom: '18%', right: '32%' }}>
-                    <div className="relative px-3 py-2 hairline bg-surface-2/60">
-                      <span className="font-mono text-mono-xs text-text-dim">
-                        {fixResult?.correlation?.llm_analysis?.cluster_fingerprint?.primary_shift ?? 'afternoon'} shift
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="absolute bottom-4 right-4 flex hairline-strong divide-x divide-rule bg-surface/95 backdrop-blur z-10">
-                  {[
-                    { icon: 'add',                 fn: () => setZoom(z => Math.min(2, +(z + 0.2).toFixed(1))), label: 'Zoom in' },
-                    { icon: 'remove',              fn: () => setZoom(z => Math.max(0.5, +(z - 0.2).toFixed(1))), label: 'Zoom out' },
-                    { icon: 'center_focus_strong', fn: () => setZoom(1), label: 'Reset zoom' },
-                  ].map(({ icon, fn, label }) => (
-                    <button
-                      key={icon}
-                      onClick={fn}
-                      aria-label={label}
-                      className="w-10 h-10 grid place-items-center text-text-dim hover:text-cyan hover:bg-surface-2"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">{icon}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => navigate('/defect')}
-                  className="absolute bottom-4 left-4 z-10 px-4 py-2 hairline-strong bg-surface/95 backdrop-blur font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim hover:text-cyan"
-                >
-                  ← back to defect
-                </button>
-              </div>
+              <CorrectiveActionDiagram
+                imagePreviewUrl={imagePreviewUrl}
+                defectPattern={defectPattern}
+                enrichment={enrichment}
+                fixResult={fixResult}
+                onBack={() => navigate('/defect')}
+              />
             </section>
 
           </div>

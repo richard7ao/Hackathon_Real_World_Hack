@@ -1,9 +1,42 @@
+# Node / Vite
 node_modules/
 dist/
 .DS_Store
 *.local
 
-# Env files with secrets (explicit; tracked files bypass ignore until removed from index)
+# Env files (never commit credentials)
 .env
 .env.local
+.env.*.local
 .vercel
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.venv-*/
+*.egg-info/
+
+# Generated artefacts (rebuilt on every run)
+reports/
+data/inspection_output.json
+data/image_manifest.json
+data/encord_prelabels.csv
+data/encord_labels.csv
+data/training_labels.csv
+data/training_history.json
+data/train_split.csv
+data/val_split.csv
+data/review_queue.csv
+data/model_metrics.json
+data/batches.json
+
+# Trained model weights (~44 MB; track via release artefact, not git)
+models/*.pt
+
+# Local downloads / temp
+data/archive*.zip
+/tmp/
+.idea/
+.vscode/

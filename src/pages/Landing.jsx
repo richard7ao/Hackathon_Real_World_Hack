@@ -4,12 +4,69 @@ import { useNarrator } from '../NarratorContext'
 import { NARRATION } from '../narration'
 
 const SECTIONS = [
-  { id: 'problem',  num: '01', label: 'Problem' },
-  { id: 'market',   num: '02', label: 'Market' },
-  { id: 'logistics',num: '03', label: 'Logistics' },
-  { id: 'founders', num: '04', label: 'Founders' },
-  { id: 'solution', num: '05', label: 'Solution' },
-  { id: 'demo',     num: '06', label: 'Demo' },
+  { id: 'problem',     num: '01', label: 'Problem' },
+  { id: 'market',      num: '02', label: 'Market' },
+  { id: 'logistics',   num: '03', label: 'Logistics' },
+  { id: 'founders',    num: '04', label: 'Founders' },
+  { id: 'solution',    num: '05', label: 'Solution' },
+  { id: 'architecture',num: '06', label: 'Architecture' },
+  { id: 'demo',        num: '07', label: 'Demo' },
+]
+
+// Five-stage system architecture, real components, real ports, real numbers.
+// Static — no clickability, no animation — same vibe as the SOLUTION grid.
+const ARCHITECTURE_STAGES = [
+  {
+    num: '01',
+    name: 'Dataset',
+    title: 'WM-811K curated subset',
+    body: '895 labelled wafer maps across nine WM-811K defect classes. Folder-per-class on disk, mirrored as the source of truth for every downstream stage.',
+    chips: ['WM-811K', '9 classes', '~100/class'],
+    role: 'INPUT',
+  },
+  {
+    num: '02',
+    name: 'Encord',
+    title: 'Annotation + active learning',
+    body: 'Project ontology with the same nine pattern values used end-to-end. Pre-labelled by Gemini 3.1, reviewed in the Encord queue, exported via the Python SDK.',
+    chips: ['Encord SDK', 'Gemini 3.1 pre-label', 'Review queue', 'Workflow stages'],
+    role: 'LABELLING',
+  },
+  {
+    num: '03',
+    name: 'Model',
+    title: 'ResNet18 fine-tuned',
+    body: 'Fine-tuned on the Encord-exported labels. Layer4 + classifier head trained, rest frozen. Hybrid serving with a Gemini fallback for low-confidence cases.',
+    chips: ['ResNet18', 'PyTorch', '224×224 RGB', 'CNN + Gemini hybrid'],
+    role: 'INFERENCE',
+  },
+  {
+    num: '04',
+    name: 'FMECA Engine',
+    title: 'NASA + IPC + JEDEC mapping',
+    body: 'Deterministic FMECA score per defect (S × O × D = RPN), then Pandas + LLM correlation against 200 simulated batches to surface root cause + corrective action.',
+    chips: ['MIL-STD-1629A', 'IPC-A-610J', 'JEDEC JESD22', 'AIAG-VDA 2019', 'FastAPI :8000'],
+    role: 'INTELLIGENCE',
+  },
+  {
+    num: '05',
+    name: 'Surface',
+    title: 'Live dashboard + audit PDF',
+    body: 'React frontend on Vite. Live monitor polls /sample → /classify → /enrich every 3.5s and lights up the stage map on real defects. Climax: a regulator-ready PDF.',
+    chips: ['React 18', 'Vite', 'Tailwind', 'ReportLab PDF', 'ElevenLabs narration'],
+    role: 'OUTPUT',
+  },
+]
+
+// Live model provenance (wired to data/model_metrics.json shape so this can
+// later be lifted from a fetch — kept inline for the static section).
+const MODEL_PROVENANCE = [
+  ['Architecture',     'ResNet18 · layer4 + fc fine-tuned'],
+  ['Image size',       '224 × 224 RGB'],
+  ['Trained on',       '895 WM-811K wafer maps · annotated in Encord'],
+  ['Fallback model',   'Gemini 3.1 flash-lite (when CNN confidence < 0.75)'],
+  ['Best val accuracy','82.7% across 9 classes'],
+  ['Strongest classes','edge-ring 95% · none 95% · donut 90% · random 90%'],
 ]
 
 const BACKERS = [
@@ -606,6 +663,111 @@ export default function Landing() {
         </div>
       </Section>
 
+      {/* ARCHITECTURE — five-stage system overview, real components, real numbers */}
+      <Section id="architecture" num="06" eyebrow="ARCHITECTURE / SYSTEM" tone="cream">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-end mb-14">
+          <h2 className="md:col-span-8 font-display text-h-lg leading-[0.92] tracking-[-0.04em] text-balance">
+            One pipeline, <span className="italic text-cyan">five stages</span>,
+            <br />every component live in this demo.
+          </h2>
+          <p className="md:col-span-4 text-text-dim text-lead font-light">
+            No mocks. No stubs. Each block below is a service running on this
+            laptop right now — Encord on the labelling side, FastAPI on the
+            intelligence side, React on the surface.
+          </p>
+        </div>
+
+        {/* Five-stage horizontal flow */}
+        <ol className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-14" aria-label="System architecture stages">
+          {ARCHITECTURE_STAGES.map((s, i) => (
+            <li key={s.num} className="relative bg-surface hairline-strong p-5 corner-ticks flex flex-col">
+              <span className="tick-tr" /><span className="tick-bl" />
+              <div className="flex items-center justify-between mb-4">
+                <span className="font-mono text-eyebrow text-text-muted">/ {s.num}</span>
+                <span className="font-mono text-eyebrow text-cyan uppercase tracking-[0.18em]">
+                  {s.role}
+                </span>
+              </div>
+              <div className="font-display text-[22px] tracking-[-0.025em] leading-tight">
+                {s.name}
+              </div>
+              <div className="font-mono text-mono-xs text-text-muted mt-1 mb-4">
+                {s.title}
+              </div>
+              <p className="text-text-dim text-body leading-[1.5] mb-5 flex-1">
+                {s.body}
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-4 border-t border-rule">
+                {s.chips.map((c) => (
+                  <span key={c} className="font-mono text-mono-xs hairline px-2 py-0.5 text-text-dim">
+                    {c}
+                  </span>
+                ))}
+              </div>
+              {i < ARCHITECTURE_STAGES.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className="hidden md:block absolute top-1/2 -right-2 -translate-y-1/2 font-mono text-cyan text-[18px] z-10"
+                >
+                  →
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+
+        {/* Two-column: process ledger + Encord-trained model provenance */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="md:col-span-7 bg-surface hairline-strong p-7 relative corner-ticks">
+            <span className="tick-tr" /><span className="tick-bl" />
+            <div className="font-mono text-eyebrow text-text-muted mb-5">/ DATA FLOW</div>
+            <pre className="font-mono text-mono-xs text-text-dim leading-[1.65] whitespace-pre-wrap">
+{`wafer image
+   ↓  POST /classify           classifier_service · :8001  (ResNet18 + Gemini fallback)
+{defect_pattern, confidence}
+   ↓  POST /enrich             loopback_api · :8000
+{S, O, D, RPN, MIL-STD-1629A, IPC-A-610J class, JEDEC impact}
+   ↓  POST /correlate          loopback_api · :8000
+{root_cause, primary_correlated_variable, evidence[], confidence}
+   ↓  POST /fix-and-verify     loopback_api · :8000
+{rpn_before → rpn_after, verification_batch, fix_verified}
+   ↓  POST /report             loopback_api · :8000
+FMECA-YYYYMMDD-XXXXXX.pdf  (regulator-ready)`}
+            </pre>
+          </div>
+
+          <div className="md:col-span-5 bg-surface hairline-strong p-7 relative corner-ticks flex flex-col">
+            <span className="tick-tr" /><span className="tick-bl" />
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-mono text-eyebrow text-text-muted">/ MODEL PROVENANCE</span>
+              <a
+                href="https://encord.com/"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="font-mono text-eyebrow text-cyan hover:underline tracking-[0.18em]"
+              >
+                ↗ ENCORD
+              </a>
+            </div>
+            <dl className="space-y-3 flex-1">
+              {MODEL_PROVENANCE.map(([k, v]) => (
+                <div key={k} className="flex items-baseline gap-3 border-b border-rule pb-2 last:border-0">
+                  <dt className="font-mono text-eyebrow text-text-muted shrink-0 w-28 uppercase tracking-[0.16em]">
+                    {k}
+                  </dt>
+                  <dd className="font-mono text-mono-xs text-text-dim leading-snug">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="mt-5 pt-4 border-t border-rule font-mono text-mono-xs text-text-muted leading-relaxed">
+              The Encord platform owns the entire labelling lifecycle: ontology,
+              pre-label suggestions, human review queue, and SDK export. The
+              dashboard you saw was trained on that exported CSV, end-to-end.
+            </div>
+          </div>
+        </div>
+      </Section>
+
       {/* DEMO CTA */}
       <section id="demo" className="relative bg-ink text-bg py-32 md:py-44 overflow-hidden">
         <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
@@ -614,7 +776,7 @@ export default function Landing() {
         <div className="relative max-w-[1280px] mx-auto px-8 md:px-16 text-center">
           <div className="font-mono text-eyebrow text-cyan mb-10 flex items-center justify-center gap-3">
             <span className="w-8 h-px bg-cyan" />
-            06 · LIVE DEMO
+            07 · LIVE DEMO
             <span className="w-8 h-px bg-cyan" />
           </div>
 

@@ -23,8 +23,11 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
+import random
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -32,12 +35,44 @@ logging.basicConfig(level=logging.INFO)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MODEL_PATH = REPO_ROOT / "models" / "wafer_classifier.pt"
+DATASET_ROOT = REPO_ROOT / "data" / "WM811k_Dataset"
+DEMO_BATCH_ROOT = REPO_ROOT / "data" / "demo_batch"
 CONFIDENCE_THRESHOLD = float(os.environ.get("LOOPBACK_CNN_CONF_THRESHOLD", "0.75"))
 
 VALID_PATTERNS = [
     "center", "donut", "edge-loc", "edge-ring",
     "loc", "random", "scratch", "near-full", "none",
 ]
+
+# Folder name on disk -> canonical pattern. Mirrors
+# encord_pipeline/step5b_export_from_folders.FOLDER_TO_LABEL.
+SAMPLE_FOLDER_TO_LABEL: dict[str, str] = {
+    "Center": "center",
+    "Donut": "donut",
+    "Edge Local": "edge-loc",
+    "Edge Ring": "edge-ring",
+    "Local": "loc",
+    "Scratch": "scratch",
+    "near full": "near-full",
+    "none": "none",
+    "random": "random",
+}
+
+# Live monitor stream weights. Tilted enough toward defects that the
+# dashboard lights up every few seconds — not a real fab pass-rate, but a
+# demo-friendly one. ~55% pass, 45% defects (edge-ring most likely so it
+# stays consistent with the seeded incident in batches.json).
+SAMPLE_LABEL_WEIGHTS: dict[str, float] = {
+    "none":      0.55,
+    "edge-ring": 0.18,
+    "center":    0.08,
+    "donut":     0.06,
+    "edge-loc":  0.05,
+    "loc":       0.03,
+    "scratch":   0.025,
+    "random":    0.015,
+    "near-full": 0.015,
+}
 
 
 class _CnnState:
@@ -196,6 +231,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["x-true-label", "x-source-folder", "x-sequence"],
 )
 
 
@@ -209,7 +245,129 @@ async def health():
         "gemini_available": bool(os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")),
         "confidence_threshold": CONFIDENCE_THRESHOLD,
         "labels": _cnn.labels,
+        "dataset_loaded": DATASET_ROOT.exists(),
     }
+
+
+@app.get("/sample")
+async def sample(label: str | None = None):
+    """Return a random labelled wafer image from the WM811k dataset.
+
+    Used by the live monitor on the frontend to mimic a continuously running
+    inline inspection feed: most wafers come back ``none``, the rare ones are
+    real defects that the CNN must classify.
+
+    Pass ``?label=edge-ring`` (or any canonical pattern) to force a specific
+    class — useful for the rehearsed demo.
+    """
+    if not DATASET_ROOT.exists():
+        raise HTTPException(
+            status_code=503,
+            detail=f"Sample dataset not found at {DATASET_ROOT}",
+        )
+
+    if label is None:
+        target_label = random.choices(
+            list(SAMPLE_LABEL_WEIGHTS.keys()),
+            weights=list(SAMPLE_LABEL_WEIGHTS.values()),
+            k=1,
+        )[0]
+    else:
+        target_label = _normalise_pattern(label)
+
+    folder = next(
+        (
+            DATASET_ROOT / folder_name
+            for folder_name, canon in SAMPLE_FOLDER_TO_LABEL.items()
+            if canon == target_label and (DATASET_ROOT / folder_name).exists()
+        ),
+        None,
+    )
+    if folder is None:
+        raise HTTPException(status_code=404, detail=f"No samples for label '{target_label}'")
+
+    images = [p for p in folder.iterdir() if p.suffix.lower() in (".jpg", ".jpeg", ".png")]
+    if not images:
+        raise HTTPException(status_code=404, detail=f"No image files in {folder}")
+
+    pick = random.choice(images)
+    return FileResponse(
+        path=pick,
+        media_type="image/jpeg",
+        filename=pick.name,
+        headers={
+            "x-true-label": target_label,
+            "x-source-folder": folder.name,
+            # Browsers aggressively cache GET image responses; force a fresh
+            # body every tick so the live monitor actually rotates.
+            "cache-control": "no-store, max-age=0",
+            "pragma": "no-cache",
+        },
+    )
+
+
+def _parse_batch_filename(name: str) -> tuple[int, str]:
+    """``07_edge-ring_801234.jpg`` -> ``(7, 'edge-ring')``."""
+    stem = Path(name).stem
+    parts = stem.split("_", 2)
+    if len(parts) < 2:
+        return (0, "none")
+    try:
+        seq = int(parts[0])
+    except ValueError:
+        seq = 0
+    label = _normalise_pattern(parts[1])
+    return seq, label
+
+
+@app.get("/demo-batch")
+async def demo_batch_manifest():
+    """List the 30 wafers staged at ``data/demo_batch/`` for the rehearsed flow."""
+    if not DEMO_BATCH_ROOT.exists():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Demo batch not found at {DEMO_BATCH_ROOT}. Run "
+                "`python -m encord_pipeline.build_demo_batch` to populate it."
+            ),
+        )
+
+    entries: list[dict] = []
+    for path in sorted(DEMO_BATCH_ROOT.iterdir()):
+        if path.suffix.lower() not in (".jpg", ".jpeg", ".png"):
+            continue
+        seq, true_label = _parse_batch_filename(path.name)
+        entries.append(
+            {
+                "sequence": seq,
+                "filename": path.name,
+                "true_label": true_label,
+                "url": f"/demo-batch/{path.name}",
+            }
+        )
+    entries.sort(key=lambda e: e["sequence"])
+    return {"batch_id": f"B-{2400 + len(entries)}", "count": len(entries), "wafers": entries}
+
+
+@app.get("/demo-batch/{filename}")
+async def demo_batch_image(filename: str):
+    """Serve a single wafer from the staged demo batch."""
+    if "/" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="invalid filename")
+    path = DEMO_BATCH_ROOT / filename
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"not found: {filename}")
+    seq, true_label = _parse_batch_filename(filename)
+    return FileResponse(
+        path=path,
+        media_type="image/jpeg",
+        filename=filename,
+        headers={
+            "x-true-label": true_label,
+            "x-sequence": str(seq),
+            "cache-control": "no-store, max-age=0",
+        },
+    )
 
 
 @app.post("/classify")
