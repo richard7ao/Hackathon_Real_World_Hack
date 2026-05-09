@@ -6,3 +6,4 @@ dist/
 # Env files with secrets (explicit; tracked files bypass ignore until removed from index)
 .env
 .env.local
+.vercel
