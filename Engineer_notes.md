@@ -1760,3 +1760,226 @@ This is actually a strong demo narrative — *"our purpose-trained model handles
 This makes Encord central to your story (data + training + deployment), gives you a real model with real metrics for credibility, and keeps Gemini as a robustness layer.
 
 *end of PRD*
+
+---
+
+# FRONTEND STATUS — what Harper built (Engineer 3)
+
+**Last updated:** Saturday 10 May 2025  
+**Author:** Harper (frontend)  
+**Audience:** Engineer 2 (backend) and Engineer 1 (classifier)
+
+---
+
+## What is live right now
+
+The React frontend at `http://localhost:5174` (Vite dev server) has three pages wired to your APIs. All four endpoints are called with real `fetch` requests. **When your servers are offline the frontend falls back to realistic mock data** — identical in shape to the real API responses — so the demo looks correct regardless.
+
+As soon as you start your FastAPI server and the classifier, everything switches over automatically. No frontend changes needed.
+
+---
+
+## API endpoints the frontend calls
+
+### Classifier — `localhost:8001`
+
+| Method | Path | Called from | Payload |
+|---|---|---|---|
+| `POST` | `/classify` | TheLine (on image upload) | `multipart/form-data` with `file` field |
+
+Expected response:
+```json
+{
+  "image_id": "wafer_2247",
+  "defect_pattern": "edge-ring",
+  "confidence": 0.91,
+  "model_used": "loopback_cnn_v1"
+}
+```
+
+`defect_pattern` must be one of: `center`, `donut`, `edge-loc`, `edge-ring`, `loc`, `random`, `scratch`, `near-full`, `none`
+
+---
+
+### FastAPI backend — `localhost:8000`
+
+#### `POST /enrich`
+
+Called from **TheLine** immediately after `/classify`. Response is stored in context and used on **TheDefect**.
+
+Request:
+```json
+{
+  "image_id": "wafer_2247",
+  "defect_pattern": "edge-ring",
+  "confidence": 0.91,
+  "target_market": "aerospace_class3"
+}
+```
+
+The frontend reads from the response:
+- `assessment.fmeca.severity` / `.occurrence` / `.detection` / `.rpn` → FMECA score bars
+- `assessment.fmeca.mandatory_corrective_action` → controls whether `/correlate` is called
+- `assessment.fmeca.mil_std_1629a_category` → Standards panel
+- `assessment.ipc_a_610.class_1/2/3_outcome` → Standards panel (shown as violations)
+- `assessment.jedec.impact` → Standards panel footer
+- `assessment.diagnosis.likely_root_cause` → header description text
+- `assessment.human_label` → defect label throughout
+- `image_id` → reference number shown in UI
+
+---
+
+#### `POST /correlate`
+
+Called from **TheDefect** on mount (if `mandatory_corrective_action` is true, which it always will be for RPN ≥ 100).
+
+Request:
+```json
+{
+  "target_defect": "edge-ring",
+  "lookback_batches": 50
+}
+```
+
+The frontend reads from the response:
+- `statistical_findings.occurrence_count` / `.occurrence_rate` → Hugo terminal line
+- `llm_analysis.root_cause_hypothesis` → Hugo terminal line
+- `llm_analysis.corrective_action.specific_adjustment` → Hugo terminal line + TheFix action description
+- `llm_analysis.confidence` → TheFix confidence stat
+- `llm_analysis.cluster_fingerprint.primary_machine` / `.primary_shift` → TheFix schematic labels
+
+The Hugo terminal **typewriter pauses** at "Hugo: analyzing…" until this call returns, then continues with the real lines. This makes the API latency feel intentional.
+
+---
+
+#### `POST /fix-and-verify`
+
+Called from **TheFix** on mount.
+
+Request:
+```json
+{
+  "target_defect": "edge-ring"
+}
+```
+
+The frontend reads from the response:
+- `verification.rpn_before` / `.rpn_after` → the big "168 → 028" headline numbers
+- `verification.rpn_improvement_pct` → progress bar width + stat
+- `verification.fix_verified` → green "verified" badge
+- `verification.verification_batch.batch_id` / `.wafers_passed` / `.wafer_count` → verification badge detail
+- `verification.defect_rate_before` / `.defect_rate_after` → shown in report modal
+- `verification.action_applied.summary` → page subheading
+- `verification.action_applied.specific_adjustment` → shown in progress bar label + report modal
+- `verification.action_applied.verification_method` → report modal corrective actions list
+- `correlation.llm_analysis.*` → Hugo terminal on TheFix (same build as TheDefect terminal)
+
+---
+
+#### `POST /report`
+
+Called from **TheFix** when user clicks "Generate FMECA report → Export PDF".
+
+Request:
+```json
+{
+  "target_defect": "edge-ring"
+}
+```
+
+Expected response: a PDF binary (`Content-Type: application/pdf`). The frontend creates a blob URL and triggers a browser download automatically. If the endpoint returns an error, the modal stays open and the button resets — no crash.
+
+---
+
+## Environment variables
+
+Two `VITE_` vars are set in `.env.local`. Vite only exposes vars prefixed `VITE_` to the browser:
+
+```
+VITE_API_BASE_URL=http://localhost:8000     # your FastAPI server
+VITE_CLASSIFIER_URL=http://localhost:8001   # Engineer 1's classifier
+```
+
+Change these if you deploy to Railway/Render — update `.env.local` (or set env vars on the host) and rebuild.
+
+---
+
+## How data flows between pages
+
+```
+TheLine
+  ├── User drops wafer image
+  ├── POST localhost:8001/classify  → { defect_pattern, confidence, image_id }
+  ├── POST localhost:8000/enrich    → enrichment (FMECA scores, IPC class, diagnosis)
+  ├── Stores both in AnalysisContext
+  └── navigate('/defect')
+
+TheDefect
+  ├── Reads enrichment from AnalysisContext
+  ├── POST localhost:8000/correlate → correlation (root cause, cluster, corrective action)
+  ├── Hugo terminal typewriter runs from correlation.llm_analysis lines
+  ├── Stores correlation in AnalysisContext
+  └── "View fix protocol →" button → navigate('/fix')
+
+TheFix
+  ├── Reads enrichment + correlation from AnalysisContext
+  ├── POST localhost:8000/fix-and-verify → fixResult (rpn_before/after, verification batch)
+  ├── Hugo terminal runs same lines as TheDefect (from fixResult.correlation)
+  ├── "Generate FMECA report" → POST localhost:8000/report → PDF download
+  └── Report modal shows all values from fixResult + enrichment
+```
+
+**Direct navigation** (e.g. going straight to `/defect` without uploading): the context defaults to `defect_pattern: 'edge-ring'` so each page still makes its API call with a valid pattern. The mock fallback fires if the backend is down, so the page always renders.
+
+---
+
+## CORS
+
+The backend needs CORS open for `http://localhost:5174` (the Vite dev server port). The PRD already has this in `main.py`:
+
+```python
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+```
+
+That covers it. If you restrict origins later, add `http://localhost:5174` and whatever the deployed frontend URL is.
+
+---
+
+## Files added/changed by the frontend
+
+```
+src/api.js                  — all API calls + mock fallbacks (the only file to edit for backend changes)
+src/AnalysisContext.jsx     — React context holding analysis state across pages
+src/App.jsx                 — wrapped with AnalysisProvider
+src/pages/TheLine.jsx       — added WaferUploadZone component
+src/pages/TheDefect.jsx     — wired to /enrich + /correlate; Hugo terminal is dynamic
+src/pages/TheFix.jsx        — wired to /fix-and-verify + /report; report modal uses real data
+.env.local                  — added VITE_API_BASE_URL + VITE_CLASSIFIER_URL
+```
+
+**The only file you ever need to touch is `src/api.js`** if a response shape changes. The mock data at the top of that file mirrors the exact API shapes from this PRD — keep them in sync if you change a field name.
+
+---
+
+## What the demo flow looks like end-to-end
+
+1. Open `http://localhost:5174`
+2. The fleet overview loads — 8 CoWoS-L stages, STG-04 flagged critical
+3. Drop any wafer image into the "Feed a wafer map image" zone (or click to pick a file)
+4. UI shows "Hugo: classifying defect pattern…" then "Hugo: running FMECA assessment…"
+5. Navigates to `/defect` — FMECA scores populate from your `/enrich` response
+6. Hugo terminal types out the real root cause from your `/correlate` response
+7. "View fix protocol →" button appears when terminal finishes
+8. `/fix` page loads — RPN 168→28 (or whatever your real numbers are) from `/fix-and-verify`
+9. Click "Generate FMECA report" → PDF downloads from your `/report` endpoint
+
+Total interactive time under 90 seconds if each API call is under 3 seconds.
+
+---
+
+*end of frontend notes*

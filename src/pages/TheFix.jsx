@@ -3,29 +3,50 @@ import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import DiagnosticModal from '../components/DiagnosticModal'
-
-const HUGO_LINES = [
-  { type: 'cmd', text: 'connecting · erp.coWoS.local' },
-  { type: 'ok',  text: 'success · 12ms' },
-  { type: 'cmd', text: 'reading inventory · subsystem A247293C3' },
-  { type: 'ai',  text: 'Hugo: 3 late items detected.' },
-  { type: 'cmd', text: 'analyzing thermal drift patterns…' },
-  { type: 'ai',  text: 'Hugo: late items correlate with failure timeline.' },
-  { type: 'cmd', text: 'thinking…' },
-  { type: 'ai',  text: 'Hugo · action 01 — expedite suppliers immediately.' },
-  { type: 'ai',  text: 'Hugo · action 02 — increase local safety stock by 5.' },
-]
+import { fixAndVerify, buildTerminalLines, downloadReport } from '../api'
+import { useAnalysis } from '../AnalysisContext'
 
 const TERM_COLOR = { cmd: 'text-text-dim', ok: 'text-ok', ai: 'text-cyan' }
 
-function ReportModal({ onClose }) {
+function ReportModal({ onClose, fixResult, defectPattern, enrichment }) {
   const closeRef = useRef(null)
+  const [downloading, setDownloading] = useState(false)
+
   useEffect(() => { closeRef.current?.focus() }, [])
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
+
+  const v   = fixResult?.verification
+  const llm = fixResult?.correlation?.llm_analysis
+  const fmeca = enrichment?.assessment?.fmeca
+
+  const rows = [
+    ['Failure Mode',    enrichment?.assessment?.human_label ?? 'Edge-ring defect'],
+    ['Stage',          'STG-04 · COW_BONDING'],
+    ['Severity (S)',   `${fmeca?.severity ?? 7} / 10`],
+    ['Occurrence (O)', `${fmeca?.occurrence ?? 6} / 10`],
+    ['Detection (D)',  `${fmeca?.detection ?? 4} / 10`],
+    ['Current RPN',    `${v?.rpn_before ?? 168} — critical`],
+    ['Projected RPN',  `${v?.rpn_after ?? 28} — acceptable`],
+    ['Cost Avoided',   '$24,500.00 USD'],
+  ]
+
+  const actions = [
+    llm?.corrective_action?.summary ?? 'Reduce reflow zone 3 setpoint to 240°C on machine M3',
+    llm?.corrective_action?.specific_adjustment ?? 'Reduce zone 3 setpoint: 244°C → 240°C',
+    llm?.corrective_action?.verification_method ?? 'Run verification batch; defect rate should drop below 3%',
+    'Schedule 72h monitoring window post-fix',
+  ]
+
+  async function handleExport() {
+    setDownloading(true)
+    const ok = await downloadReport(defectPattern)
+    setDownloading(false)
+    if (ok) onClose()
+  }
 
   return (
     <div
@@ -41,7 +62,7 @@ function ReportModal({ onClose }) {
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-cyan text-[18px]" aria-hidden="true">description</span>
             <span id="report-title" className="font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim">
-              FMECA report · A247293C3
+              FMECA report · {enrichment?.image_id?.toUpperCase() ?? 'A247293C3'}
             </span>
           </div>
           <button
@@ -58,45 +79,42 @@ function ReportModal({ onClose }) {
           <div>
             <div className="font-mono text-eyebrow text-text-muted mb-2">SUMMARY</div>
             <h3 className="font-display text-h-sm tracking-[-0.025em]">
-              Thermal overshoot at zone 4 · COW_BONDING.
+              {llm?.corrective_action?.summary ?? 'Reduce reflow zone 3 setpoint on M3 to 240°C.'}
             </h3>
           </div>
+
           <div className="grid grid-cols-2 gap-px bg-rule">
-            {[
-              ['Failure Mode',   'Thermal Overshoot @ Zone 4'],
-              ['Stage',          'STG-04 · COW_BONDING'],
-              ['Severity (S)',   '8 / 10'],
-              ['Occurrence (O)', '4 / 10'],
-              ['Detection (D)',  '3 / 10'],
-              ['Current RPN',    '187 — critical'],
-              ['Projected RPN',  '42 — acceptable'],
-              ['Cost Avoided',   '$24,500.00 USD'],
-            ].map(([k, v]) => {
+            {rows.map(([k, v_]) => {
               const tone = k === 'Current RPN' ? 'text-danger' : k === 'Projected RPN' ? 'text-cyan' : 'text-text'
               return (
                 <div key={k} className="bg-surface p-4">
                   <div className="font-mono text-eyebrow text-text-muted mb-1.5">{k.toUpperCase()}</div>
-                  <div className={`font-mono text-data ${tone}`}>{v}</div>
+                  <div className={`font-mono text-data ${tone}`}>{v_}</div>
                 </div>
               )
             })}
           </div>
+
           <div className="hairline p-5">
             <div className="font-mono text-eyebrow text-text-muted mb-3">CORRECTIVE ACTIONS</div>
             <ol className="space-y-2 font-mono text-mono-sm text-text-dim">
-              {[
-                'Expedite 3 late supply items with suppliers',
-                'Increase local safety stock by 5 units',
-                'Recalibrate heater block B thermal profile',
-                'Schedule 72h monitoring window post-fix',
-              ].map((a, i) => (
-                <li key={a} className="flex gap-3">
-                  <span className="text-cyan tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+              {actions.map((a, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="text-cyan tabular-nums shrink-0">{String(i + 1).padStart(2, '0')}</span>
                   <span>{a}</span>
                 </li>
               ))}
             </ol>
           </div>
+
+          {v?.fix_verified && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-ok/10 hairline border-ok">
+              <span className="material-symbols-outlined text-ok text-[18px]" aria-hidden="true">verified</span>
+              <span className="font-mono text-mono-xs text-ok">
+                Fix verified · defect rate {((v.defect_rate_after ?? 0.021) * 100).toFixed(1)}% (was {((v.defect_rate_before ?? 0.16) * 100).toFixed(1)}%)
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-rule bg-surface-2/40">
@@ -107,10 +125,11 @@ function ReportModal({ onClose }) {
             Close
           </button>
           <button
-            onClick={onClose}
-            className="px-5 py-2 bg-cyan text-white font-mono text-mono-xs uppercase tracking-[0.18em] hover:bg-cyan-deep"
+            onClick={handleExport}
+            disabled={downloading}
+            className="px-5 py-2 bg-cyan text-white font-mono text-mono-xs uppercase tracking-[0.18em] hover:bg-cyan-deep disabled:opacity-50 transition-colors"
           >
-            Export PDF →
+            {downloading ? 'Generating…' : 'Export PDF →'}
           </button>
         </div>
       </div>
@@ -119,17 +138,42 @@ function ReportModal({ onClose }) {
 }
 
 export default function TheFix() {
-  const [showDiag, setShowDiag] = useState(false)
+  const navigate  = useNavigate()
+  const { defectPattern, enrichment, fixResult: cachedFix, update } = useAnalysis()
+  const [showDiag, setShowDiag]     = useState(false)
   const [showReport, setShowReport] = useState(false)
-  const [n, setN] = useState(0)
-  const [zoom, setZoom] = useState(1)
-  const navigate = useNavigate()
+  const [fixResult, setFixResult]   = useState(cachedFix)
+  const [zoom, setZoom]             = useState(1)
+  const [visibleLines, setVisibleLines] = useState(0)
 
   useEffect(() => {
-    if (n >= HUGO_LINES.length) return
-    const id = setTimeout(() => setN(v => v + 1), 700)
+    if (cachedFix) { setFixResult(cachedFix); return }
+    fixAndVerify(defectPattern).then(data => {
+      setFixResult(data)
+      update({ fixResult: data })
+    })
+  }, [])
+
+  const hugoLines = fixResult
+    ? buildTerminalLines(fixResult.correlation)
+    : [
+        { type: 'cmd', text: 'connecting · erp.coWoS.local' },
+        { type: 'ok',  text: 'success · 12ms' },
+        { type: 'ai',  text: 'Hugo: verifying corrective action…' },
+      ]
+
+  useEffect(() => {
+    if (visibleLines >= hugoLines.length) return
+    const id = setTimeout(() => setVisibleLines(v => v + 1), 700)
     return () => clearTimeout(id)
-  }, [n])
+  }, [visibleLines, hugoLines.length])
+
+  const v         = fixResult?.verification
+  const rpnBefore = v?.rpn_before        ?? 168
+  const rpnAfter  = v?.rpn_after         ?? 28
+  const impPct    = v?.rpn_improvement_pct ?? 83.3
+  const conf      = fixResult?.correlation?.llm_analysis?.confidence ?? 0.91
+  const action    = v?.action_applied
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans">
@@ -148,13 +192,12 @@ export default function TheFix() {
                   RESOLUTION · REF-RES-992
                 </div>
                 <h1 className="font-display text-h-lg text-balance leading-[0.9]">
-                  From <span className="text-danger">187</span>
+                  From <span className="text-danger">{rpnBefore}</span>
                   <span className="text-text-muted"> to </span>
-                  <span className="italic text-cyan">42</span>.
+                  <span className="italic text-cyan">{String(rpnAfter).padStart(3, '0')}</span>.
                 </h1>
                 <p className="mt-6 max-w-xl text-text-dim text-lead font-light">
-                  Hugo's recommended corrective protocol drops Risk Priority below threshold
-                  inside a four-hour predictive drift window — before scrap accumulates further.
+                  {action?.summary ?? "Hugo's recommended corrective protocol drops Risk Priority below threshold inside a four-hour predictive drift window — before scrap accumulates further."}
                 </p>
               </div>
 
@@ -177,11 +220,11 @@ export default function TheFix() {
                   </div>
                   <div>
                     <div className="font-mono text-eyebrow text-text-muted mb-1">CONF.</div>
-                    <div className="font-mono text-data text-cyan">94%</div>
+                    <div className="font-mono text-data text-cyan">{Math.round(conf * 100)}%</div>
                   </div>
                   <div>
-                    <div className="font-mono text-eyebrow text-text-muted mb-1">ETA</div>
-                    <div className="font-mono text-data text-text">45s</div>
+                    <div className="font-mono text-eyebrow text-text-muted mb-1">IMPROVE</div>
+                    <div className="font-mono text-data text-ok">{impPct.toFixed(0)}%</div>
                   </div>
                 </div>
               </div>
@@ -194,7 +237,7 @@ export default function TheFix() {
                   <div className="flex items-center justify-between gap-6">
                     <div>
                       <div className="font-mono text-eyebrow text-text-muted mb-2">CURRENT</div>
-                      <div className="font-display text-metric leading-none text-danger">187</div>
+                      <div className="font-display text-metric leading-none text-danger">{rpnBefore}</div>
                     </div>
                     <div className="flex flex-col items-center gap-2">
                       <span className="font-mono text-eyebrow text-text-muted">→</span>
@@ -202,19 +245,33 @@ export default function TheFix() {
                     </div>
                     <div className="text-right">
                       <div className="font-mono text-eyebrow text-text-muted mb-2">PROJECTED</div>
-                      <div className="font-display text-metric leading-none text-cyan">042</div>
+                      <div className="font-display text-metric leading-none text-cyan">{String(rpnAfter).padStart(3, '0')}</div>
                     </div>
                   </div>
 
                   <div className="mt-6 pt-5 border-t border-rule">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-mono-xs text-text-dim">Predictive drift window</span>
-                      <span className="font-mono text-mono-xs text-cyan tabular-nums">04:00:00</span>
+                      <span className="font-mono text-mono-xs text-text-dim">
+                        {action?.specific_adjustment ?? 'Reduce zone 3 setpoint: 244°C → 240°C on machine M3'}
+                      </span>
                     </div>
                     <div className="h-1 w-full bg-surface-2 overflow-hidden">
-                      <div className="h-full bg-cyan" style={{ width: '24%' }} />
+                      <div className="h-full bg-cyan transition-all duration-700" style={{ width: `${impPct}%` }} />
+                    </div>
+                    <div className="flex justify-between mt-1">
+                      <span className="font-mono text-mono-xs text-text-muted">0</span>
+                      <span className="font-mono text-mono-xs text-cyan">{impPct.toFixed(0)}% RPN reduction</span>
                     </div>
                   </div>
+
+                  {v?.fix_verified && (
+                    <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-ok/10 hairline border-ok">
+                      <span className="material-symbols-outlined text-ok text-[16px]" aria-hidden="true">verified</span>
+                      <span className="font-mono text-mono-xs text-ok">
+                        Verification batch {v.verification_batch?.batch_id} · {v.verification_batch?.wafers_passed}/{v.verification_batch?.wafer_count} passed
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -222,7 +279,7 @@ export default function TheFix() {
                   className="group bg-cyan text-white py-5 px-6 flex items-center justify-between hover:bg-cyan-deep transition-colors"
                 >
                   <span className="font-display text-[20px] tracking-[-0.02em]">Generate FMECA report</span>
-                  <span className="font-mono text-mono-xs">PDF · 1pg →</span>
+                  <span className="font-mono text-mono-xs">PDF · MIL-STD-1629A →</span>
                 </button>
 
                 <div className="bg-surface hairline-strong flex-1 min-h-[220px] flex flex-col">
@@ -236,13 +293,13 @@ export default function TheFix() {
                     <span className="font-mono text-mono-xs text-cyan blink">● live</span>
                   </div>
                   <div className="px-5 py-4 font-mono text-mono-sm space-y-1.5 flex-1 overflow-y-auto scrollbar-thin" role="log" aria-live="polite">
-                    {HUGO_LINES.slice(0, n).map((m, i) => (
-                      <div key={i} className={`flex gap-2 animate-rise ${TERM_COLOR[m.type]}`}>
+                    {hugoLines.slice(0, visibleLines).map((m, i) => (
+                      <div key={i} className={`flex gap-2 animate-rise ${TERM_COLOR[m.type] ?? 'text-text-dim'}`}>
                         <span className="text-text-muted shrink-0" aria-hidden="true">{m.type === 'ai' ? '✦' : '›'}</span>
                         <span>{m.text}</span>
                       </div>
                     ))}
-                    {n < HUGO_LINES.length && (
+                    {visibleLines < hugoLines.length && (
                       <span className="inline-block w-2 h-3 bg-cyan animate-flicker mt-1" aria-hidden="true" />
                     )}
                   </div>
@@ -275,7 +332,7 @@ export default function TheFix() {
                   <div className="absolute" style={{ top: '38%', left: '28%' }}>
                     <div className="relative w-[260px] h-[170px] hairline border-cyan bg-cyan/5">
                       <span className="absolute -top-7 left-0 bg-cyan text-white font-mono text-mono-xs px-2 py-1">
-                        A247293C3 · primary
+                        {defectPattern} · primary
                       </span>
                       <span className="absolute -right-3 top-1/2 w-6 h-px bg-cyan" />
                       <span className="absolute font-mono text-mono-xs text-cyan" style={{ left: 'calc(100% + 16px)', top: 'calc(50% - 8px)' }}>
@@ -289,13 +346,17 @@ export default function TheFix() {
 
                   <div className="absolute" style={{ top: '20%', right: '20%' }}>
                     <div className="relative w-[120px] h-[120px] hairline border-amber/60 bg-amber/5">
-                      <span className="absolute -top-6 left-0 font-mono text-mono-xs text-amber">X219128</span>
+                      <span className="absolute -top-6 left-0 font-mono text-mono-xs text-amber">
+                        {fixResult?.correlation?.llm_analysis?.cluster_fingerprint?.primary_machine ?? 'M3'}
+                      </span>
                     </div>
                   </div>
 
                   <div className="absolute" style={{ bottom: '18%', right: '32%' }}>
                     <div className="relative px-3 py-2 hairline bg-surface-2/60">
-                      <span className="font-mono text-mono-xs text-text-dim">heater_block_B</span>
+                      <span className="font-mono text-mono-xs text-text-dim">
+                        {fixResult?.correlation?.llm_analysis?.cluster_fingerprint?.primary_shift ?? 'afternoon'} shift
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -331,7 +392,14 @@ export default function TheFix() {
       </div>
 
       {showDiag   && <DiagnosticModal onClose={() => setShowDiag(false)} />}
-      {showReport && <ReportModal    onClose={() => setShowReport(false)} />}
+      {showReport && (
+        <ReportModal
+          onClose={() => setShowReport(false)}
+          fixResult={fixResult}
+          defectPattern={defectPattern}
+          enrichment={enrichment}
+        />
+      )}
     </div>
   )
 }

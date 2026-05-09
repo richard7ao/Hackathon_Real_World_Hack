@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import DiagnosticModal from '../components/DiagnosticModal'
+import { classifyWafer, enrich } from '../api'
+import { useAnalysis } from '../AnalysisContext'
 
 const STAGES = [
   { id: 'STG-01', label: 'WAFER_IN',    icon: 'conveyor_belt', status: 'ok',    yield: 98.1 },
@@ -106,15 +108,100 @@ function StageNode({ stage, isSelected, onClick, idx }) {
   )
 }
 
+function WaferUploadZone({ onAnalyzing, onDone }) {
+  const [dragging, setDragging] = useState(false)
+  const [status, setStatus]     = useState(null) // null | 'classifying' | 'enriching'
+  const inputRef = useRef(null)
+
+  async function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return
+    setStatus('classifying')
+    onAnalyzing()
+    try {
+      const classified = await classifyWafer(file)
+      setStatus('enriching')
+      const enrichment = await enrich(classified.image_id, classified.defect_pattern, classified.confidence)
+      onDone({ imageId: classified.image_id, defectPattern: classified.defect_pattern, confidence: classified.confidence, enrichment })
+    } finally {
+      setStatus(null)
+    }
+  }
+
+  const loading = status !== null
+
+  return (
+    <div className="mb-12">
+      <div className="flex items-center gap-4 mb-4">
+        <span className="font-mono text-eyebrow text-text-muted">/ WAFER ANALYSIS</span>
+        <div className="flex-1 h-px bg-rule" />
+        <span className="font-mono text-mono-xs text-text-muted">drop an image to begin</span>
+      </div>
+
+      <div
+        onDragOver={e => { e.preventDefault(); setDragging(true) }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]) }}
+        onClick={() => !loading && inputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        aria-label="Upload wafer map image for analysis"
+        onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && !loading && inputRef.current?.click()}
+        className={`relative h-28 flex items-center justify-center transition-all duration-200 cursor-pointer
+          ${dragging
+            ? 'hairline !border-cyan bg-cyan/5'
+            : loading
+              ? 'hairline bg-surface-2/40'
+              : 'border border-dashed border-rule hover:border-cyan/60 hover:bg-surface-2/30'
+          }`}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={e => handleFile(e.target.files[0])}
+        />
+
+        {loading ? (
+          <div className="flex items-center gap-3 font-mono text-mono-sm text-cyan">
+            <span className="w-2 h-2 bg-cyan rounded-full animate-ping" aria-hidden="true" />
+            {status === 'classifying'
+              ? 'Hugo: classifying defect pattern…'
+              : 'Hugo: running FMECA assessment…'}
+          </div>
+        ) : (
+          <div className="flex items-center gap-5 text-text-muted select-none">
+            <span className="material-symbols-outlined text-[36px]" aria-hidden="true">upload_file</span>
+            <div>
+              <div className="font-display text-[17px] text-text tracking-[-0.015em]">
+                Feed a wafer map image
+              </div>
+              <div className="font-mono text-mono-xs mt-1">
+                jpg · png · tiff — drag &amp; drop or click
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function TheLine() {
-  const navigate = useNavigate()
+  const navigate    = useNavigate()
+  const { update }  = useAnalysis()
   const [selected, setSelected] = useState('STG-04')
   const [showModal, setShowModal] = useState(false)
   const fleetYield = useFleet()
   const stage = STAGES.find(s => s.id === selected)
-  const term = TERMINAL[selected] ?? TERMINAL.default
+  const term  = TERMINAL[selected] ?? TERMINAL.default
   const errorCount = STAGES.filter(s => s.status === 'error').length
   const warnCount  = STAGES.filter(s => s.status === 'warn').length
+
+  function handleAnalyzeDone({ imageId, defectPattern, confidence, enrichment }) {
+    update({ imageId, defectPattern, confidence, enrichment, correlation: null, fixResult: null })
+    navigate('/defect')
+  }
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans">
@@ -196,6 +283,11 @@ export default function TheLine() {
               ))}
             </div>
 
+            <WaferUploadZone
+              onAnalyzing={() => {}}
+              onDone={handleAnalyzeDone}
+            />
+
             <div className="grid grid-cols-12 gap-6">
               <div className="col-span-12 lg:col-span-7 relative bg-surface hairline-strong">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-rule bg-surface-2/40">
@@ -236,7 +328,7 @@ export default function TheLine() {
                     <div className="pr-3">
                       <div className="font-mono text-eyebrow text-text-muted">RPN</div>
                       <div className={`font-display text-[24px] mt-1 ${stage.status === 'error' ? 'text-danger' : 'text-text-dim'}`}>
-                        {stage.status === 'error' ? '187' : '—'}
+                        {stage.status === 'error' ? '168' : '—'}
                       </div>
                     </div>
                     <div className="px-3">
@@ -266,7 +358,7 @@ export default function TheLine() {
                     >
                       <span className="font-mono text-eyebrow opacity-80">03 · RESOLUTION</span>
                       <span className="font-display text-[18px] tracking-[-0.02em]">Fix protocol</span>
-                      <span className="font-mono text-mono-xs">RPN 187 → 42 →</span>
+                      <span className="font-mono text-mono-xs">RPN 168 → 28 →</span>
                     </button>
                   </div>
                 ) : (

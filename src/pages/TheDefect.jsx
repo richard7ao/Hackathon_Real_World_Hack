@@ -1,19 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import DiagnosticModal from '../components/DiagnosticModal'
+import { correlate, buildTerminalLines } from '../api'
+import { useAnalysis } from '../AnalysisContext'
 
-const AI_LINES = [
+const STATIC_TERM_LINES = [
   { type: 'cmd', text: 'connecting · erp.coWoS.local' },
   { type: 'ok',  text: 'success · 12ms' },
-  { type: 'cmd', text: 'reading inventory · subsystem A247293C3' },
-  { type: 'ai',  text: 'Hugo: 3 late items detected for this subsystem.' },
-  { type: 'cmd', text: 'analyzing thermal drift patterns…' },
-  { type: 'ai',  text: 'Hugo: late items correlate with failure timeline.' },
-  { type: 'cmd', text: 'thinking…' },
-  { type: 'ai',  text: 'Hugo · action 01 — expedite suppliers immediately.' },
-  { type: 'ai',  text: 'Hugo · action 02 — increase local safety stock by 5.' },
+  { type: 'cmd', text: 'reading batch data · last 50 batches' },
 ]
 
 const TERM_COLOR = { cmd: 'text-text-dim', ok: 'text-ok', ai: 'text-cyan' }
@@ -29,17 +25,70 @@ function useScrap(initial = 12405.89) {
 
 export default function TheDefect() {
   const navigate = useNavigate()
+  const { defectPattern, enrichment, correlation: cachedCorrelation, update } = useAnalysis()
   const [showDiag, setShowDiag] = useState(false)
-  const [n, setN] = useState(0)
+  const [correlation, setCorrelation] = useState(cachedCorrelation)
+  const [visibleLines, setVisibleLines] = useState(0)
   const scrap = useScrap()
 
+  // Fetch correlation on mount if not cached
   useEffect(() => {
-    if (n >= AI_LINES.length) return
-    const id = setTimeout(() => setN(v => v + 1), 700)
+    if (cachedCorrelation) { setCorrelation(cachedCorrelation); return }
+    correlate(defectPattern).then(data => {
+      setCorrelation(data)
+      update({ correlation: data })
+    })
+  }, [])
+
+  // Build full terminal line list — static lines first, then dynamic once API returns.
+  // The typewriter pauses at the loading line until correlation arrives.
+  const allLines = useMemo(() => {
+    if (!correlation) {
+      return [...STATIC_TERM_LINES, { type: 'ai', text: 'Hugo: analyzing…' }]
+    }
+    return buildTerminalLines(correlation)
+  }, [correlation])
+
+  // Typewriter — pauses at the "analyzing…" placeholder until correlation loads
+  useEffect(() => {
+    if (visibleLines >= allLines.length) return
+    const atLoadingLine = visibleLines === STATIC_TERM_LINES.length && !correlation
+    if (atLoadingLine) return
+    const id = setTimeout(() => setVisibleLines(v => v + 1), 700)
     return () => clearTimeout(id)
-  }, [n])
+  }, [visibleLines, allLines.length, correlation])
+
+  const fmeca    = enrichment?.assessment?.fmeca
+  const ipc      = enrichment?.assessment?.ipc_a_610
+  const jedec    = enrichment?.assessment?.jedec
+  const diagnosis = enrichment?.assessment?.diagnosis
+  const label    = enrichment?.assessment?.human_label ?? 'Edge-ring defect'
+
+  // Fallback values match current design when no enrichment loaded yet
+  const S   = fmeca?.severity   ?? 7
+  const O   = fmeca?.occurrence ?? 6
+  const D   = fmeca?.detection  ?? 4
+  const RPN = fmeca?.rpn        ?? 168
+
+  const violations = [
+    [
+      'IPC-A-610 Class 3',
+      ipc?.class_3_outcome?.replace(/_/g, ' ').toLowerCase() ?? 'fail · aerospace/military',
+    ],
+    [
+      'IPC-A-610 Class 2',
+      ipc?.class_2_outcome?.replace(/_/g, ' ').toLowerCase() ?? 'fail · industrial/automotive',
+    ],
+    [
+      'MIL-STD-1629A',
+      fmeca?.mil_std_1629a_category ?? 'II — Critical',
+    ],
+  ]
+
+  const rootCause = diagnosis?.likely_root_cause ?? 'Plasma etch non-uniformity or chamber edge effect'
 
   const [dollars, cents] = scrap.toFixed(2).split('.')
+  const typewriterDone = visibleLines >= allLines.length
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans">
@@ -62,8 +111,8 @@ export default function TheDefect() {
                   would have <span className="text-text-muted">caught</span>.
                 </h1>
                 <p className="mt-6 max-w-xl text-text-dim text-lead font-light">
-                  Failure mode <span className="font-mono text-text">A247293C3</span> — thermal overshoot at zone 4
-                  during Cu-Cu bonding. IPC-A-610 violation. Yield impact climbing 0.04% per minute.
+                  <span className="font-mono text-text">{label}</span> — {rootCause.toLowerCase()}.
+                  IPC-A-610 violation. Yield impact climbing 0.04% per minute.
                 </p>
               </div>
 
@@ -97,7 +146,7 @@ export default function TheDefect() {
 
             <section
               className="relative bg-surface hairline-strong overflow-hidden h-[520px] corner-ticks"
-              aria-label="Defect visualization for A247293C3"
+              aria-label={`Defect visualization for ${label}`}
             >
               <span className="tick-tr" /><span className="tick-bl" />
 
@@ -110,7 +159,7 @@ export default function TheDefect() {
                 </span>
               </div>
               <div className="absolute top-4 right-4 z-20 font-mono text-mono-xs text-text-muted">
-                REF · A247293C3
+                REF · {enrichment?.image_id?.toUpperCase() ?? 'A247293C3'}
               </div>
 
               <svg width="100%" height="100%" className="absolute inset-0 opacity-50" aria-hidden="true">
@@ -144,7 +193,7 @@ export default function TheDefect() {
               <div className="absolute" style={{ top: '32%', left: '34%' }}>
                 <div className="relative w-[260px] h-[170px] hairline border-danger">
                   <span className="absolute -top-7 left-0 bg-danger text-white font-mono text-mono-xs px-2 py-1">
-                    A247293C3 · primary
+                    {defectPattern} · primary
                   </span>
                   <span className="absolute -right-3 top-1/2 w-6 h-px bg-danger" />
                   <span className="absolute font-mono text-mono-xs text-danger" style={{ left: 'calc(100% + 16px)', top: 'calc(50% - 8px)' }}>
@@ -158,24 +207,25 @@ export default function TheDefect() {
                 <span className="absolute font-mono text-mono-xs text-cyan -top-4">X219128</span>
               </div>
 
-              <div className="absolute bottom-5 left-5 w-[360px] glass corner-ticks p-5 shadow-lg">
+              {/* Hugo terminal — wired to real correlation data */}
+              <div className="absolute bottom-5 left-5 w-[400px] glass corner-ticks p-5 shadow-lg">
                 <span className="tick-tr" /><span className="tick-bl" />
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-mono text-eyebrow text-cyan">HUGO · ANALYSIS</span>
                   <span className="material-symbols-outlined text-cyan text-[14px]" aria-hidden="true">terminal</span>
                 </div>
-                <div className="font-mono text-mono-xs space-y-1 max-h-[160px] overflow-y-auto scrollbar-thin" role="log" aria-live="polite">
-                  {AI_LINES.slice(0, n).map((m, i) => (
-                    <div key={i} className={`flex gap-2 animate-rise ${TERM_COLOR[m.type]}`}>
+                <div className="font-mono text-mono-xs space-y-1 max-h-[180px] overflow-y-auto scrollbar-thin" role="log" aria-live="polite">
+                  {allLines.slice(0, visibleLines).map((m, i) => (
+                    <div key={i} className={`flex gap-2 animate-rise ${TERM_COLOR[m.type] ?? 'text-text-dim'}`}>
                       <span className="text-text-muted shrink-0" aria-hidden="true">{m.type === 'ai' ? '✦' : '›'}</span>
                       <span>{m.text}</span>
                     </div>
                   ))}
-                  {n < AI_LINES.length && (
+                  {!typewriterDone && (
                     <span className="inline-block w-2 h-3 bg-cyan animate-flicker mt-1" aria-hidden="true" />
                   )}
                 </div>
-                {n >= AI_LINES.length && (
+                {typewriterDone && (
                   <button
                     onClick={() => navigate('/fix')}
                     className="mt-4 w-full bg-cyan text-white font-mono text-mono-xs uppercase tracking-[0.18em] py-2.5 hover:bg-cyan-deep transition-colors"
@@ -187,6 +237,7 @@ export default function TheDefect() {
             </section>
 
             <section className="grid grid-cols-12 gap-6">
+              {/* FMECA section — real S/O/D/RPN from /enrich */}
               <div className="col-span-12 lg:col-span-8 bg-surface hairline-strong p-8 relative">
                 <div className="flex items-center justify-between mb-6">
                   <span className="font-mono text-eyebrow text-text-muted">MOD · FMECA-01</span>
@@ -198,18 +249,18 @@ export default function TheDefect() {
 
                 <div className="grid grid-cols-3 gap-px bg-rule">
                   {[
-                    { label: 'Severity',   value: 8,  color: 'text-danger', bar: 'bg-danger',  max: 10 },
-                    { label: 'Occurrence', value: 4,  color: 'text-amber',  bar: 'bg-amber',   max: 10 },
-                    { label: 'Detection',  value: 3,  color: 'text-cyan',   bar: 'bg-cyan',    max: 10 },
-                  ].map(({ label, value, color, bar, max }) => (
+                    { label: 'Severity',   value: S, color: 'text-danger', bar: 'bg-danger' },
+                    { label: 'Occurrence', value: O, color: 'text-amber',  bar: 'bg-amber'  },
+                    { label: 'Detection',  value: D, color: 'text-cyan',   bar: 'bg-cyan'   },
+                  ].map(({ label, value, color, bar }) => (
                     <div key={label} className="bg-surface p-5">
                       <div className="font-mono text-eyebrow text-text-muted mb-3">{label.toUpperCase()}</div>
                       <div className="flex items-baseline gap-2">
                         <span className={`font-display text-h-md ${color}`}>{value}</span>
-                        <span className="font-mono text-mono-sm text-text-muted">/ {max}</span>
+                        <span className="font-mono text-mono-sm text-text-muted">/ 10</span>
                       </div>
                       <div className="mt-3 h-px w-full bg-rule overflow-hidden">
-                        <div className={`h-full ${bar}`} style={{ width: `${(value / max) * 100}%` }} />
+                        <div className={`h-full ${bar}`} style={{ width: `${value * 10}%` }} />
                       </div>
                     </div>
                   ))}
@@ -219,8 +270,8 @@ export default function TheDefect() {
                   <div>
                     <div className="font-mono text-eyebrow text-text-muted mb-2">RISK PRIORITY NUMBER</div>
                     <div className="flex items-baseline gap-3">
-                      <span className="font-display text-metric text-danger leading-none">96</span>
-                      <span className="font-mono text-mono-sm text-text-muted">threshold &gt; 50</span>
+                      <span className="font-display text-metric text-danger leading-none">{RPN}</span>
+                      <span className="font-mono text-mono-sm text-text-muted">threshold &gt; 100</span>
                     </div>
                   </div>
                   <button
@@ -232,17 +283,14 @@ export default function TheDefect() {
                 </div>
               </div>
 
+              {/* Standards violations — real IPC/MIL/JEDEC data */}
               <div className="col-span-12 lg:col-span-4 bg-surface hairline-strong p-8 flex flex-col">
                 <div className="font-mono text-eyebrow text-text-muted mb-2">MOD · VIOLATION-02</div>
                 <h2 className="font-display text-h-sm tracking-[-0.025em] mb-6">
                   Standards
                 </h2>
                 <ul className="space-y-4 flex-1">
-                  {[
-                    ['IPC-A-610', 'pad misalignment > 25%'],
-                    ['IPC-J-STD', 'solder bridge · pins 4–5'],
-                    ['INT-T412',  'thermal Δ > 1.5°C / zone'],
-                  ].map(([code, msg]) => (
+                  {violations.map(([code, msg]) => (
                     <li key={code} className="flex gap-3 items-start pb-4 border-b border-rule last:border-0">
                       <span className="font-mono text-mono-xs text-danger shrink-0 w-2 h-2 mt-1.5 bg-danger" aria-hidden="true" />
                       <div className="flex-1">
@@ -252,6 +300,12 @@ export default function TheDefect() {
                     </li>
                   ))}
                 </ul>
+                {jedec?.impact && (
+                  <div className="pt-4 border-t border-rule">
+                    <div className="font-mono text-eyebrow text-text-muted mb-1">JEDEC IMPACT</div>
+                    <div className="font-mono text-mono-xs text-text-dim">{jedec.impact}</div>
+                  </div>
+                )}
               </div>
             </section>
 
