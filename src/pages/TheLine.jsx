@@ -46,15 +46,15 @@ function useFleetStats() {
 }
 
 function TerminalLine({ type, text }) {
-  const color =
+  const cls =
     type === 'err' ? 'text-error' :
     type === 'ok'  ? 'text-primary-fixed' :
     type === 'ai'  ? 'text-secondary' :
     type === 'sub' ? 'text-on-surface-variant pl-4 border-l-2 border-error ml-1' :
     'text-on-surface'
   return (
-    <div className={`flex gap-2 text-xs ${color}`}>
-      {type !== 'sub' && <span className="text-secondary shrink-0">&gt;</span>}
+    <div className={`flex gap-2 text-xs ${cls}`}>
+      {type !== 'sub' && <span className="text-secondary shrink-0" aria-hidden="true">&gt;</span>}
       <span>{text}</span>
     </div>
   )
@@ -69,6 +69,13 @@ export default function TheLine() {
   const msgs = TERMINAL_MSGS[selectedStage] || TERMINAL_MSGS.default
   const selected = STAGES.find(s => s.id === selectedStage)
 
+  const handleStageKey = (e, stage) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setSelectedStage(stage.id)
+    }
+  }
+
   return (
     <div className="bg-background text-on-surface font-body-md overflow-x-hidden min-h-screen flex flex-col">
       <TopBar onDiagnostic={() => setShowModal(true)} />
@@ -76,25 +83,30 @@ export default function TheLine() {
       <div className="flex flex-1 mt-16 h-[calc(100vh-64px)] overflow-hidden">
         <Sidebar active="fleet" onNewAnalysis={() => navigate('/defect')} />
 
-        <main className="flex-1 relative overflow-auto p-8 bg-technical-grid bg-grid">
+        <main id="main-content" className="flex-1 relative overflow-auto p-8 bg-technical-grid bg-grid">
 
           {/* Fleet Status Panel */}
-          <div className="absolute top-8 right-8 bg-glass border border-outline-variant p-4 w-64 z-20">
+          <div
+            className="absolute top-8 right-8 bg-glass border border-outline-variant p-4 w-64 z-20"
+            aria-label="Fleet status summary"
+          >
             <div className="font-label-caps text-label-caps text-on-surface-variant mb-2">SYS-FLT-STS</div>
             <div className="flex items-end gap-2 mb-4">
-              <span className="font-headline-lg text-headline-lg text-primary">{yieldPct}%</span>
+              <span className="font-headline-lg text-headline-lg text-primary" aria-label={`${yieldPct}% yield`}>
+                {yieldPct}%
+              </span>
               <span className="font-data-sm text-data-sm text-primary-fixed-dim uppercase mb-1">Yield</span>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-xs">
+            <div className="space-y-2" role="list">
+              <div className="flex justify-between items-center text-xs" role="listitem">
                 <span className="text-on-surface-variant font-data-sm">Active Nodes</span>
                 <span className="text-primary font-data-display">1,024</span>
               </div>
-              <div className="flex justify-between items-center text-xs">
+              <div className="flex justify-between items-center text-xs" role="listitem">
                 <span className="text-on-surface-variant font-data-sm">Warnings</span>
                 <span className="text-error font-data-display">3</span>
               </div>
-              <div className="h-1 bg-surface-variant mt-2 w-full">
+              <div className="h-1 bg-surface-variant mt-2 w-full" role="progressbar" aria-valuenow={yieldPct} aria-valuemin={0} aria-valuemax={100} aria-label="Yield progress">
                 <div className="h-full bg-primary-fixed transition-all duration-1000" style={{ width: `${yieldPct}%` }} />
               </div>
             </div>
@@ -103,63 +115,77 @@ export default function TheLine() {
           {/* Pipeline Visualization */}
           <div className="w-full min-w-[1100px] mt-24 relative h-80 flex items-center justify-between px-12">
 
-            {/* SVG connector lines */}
-            <svg className="absolute inset-0 w-full h-full z-0" style={{ pointerEvents: 'none' }}>
+            {/* SVG connector lines — decorative */}
+            <svg className="absolute inset-0 w-full h-full z-0" aria-hidden="true" style={{ pointerEvents: 'none' }}>
               <line className="blueprint-line" x1="5%" x2="95%" y1="50%" y2="50%" />
               {[12.5, 25, 37.5, 62.5, 75, 87.5].map(x => (
                 <line key={x} className="blueprint-line"
                   x1={`${x}%`} x2={`${x}%`}
-                  y1="50%"      y2={x % 25 === 12.5 || x === 62.5 || x === 87.5 ? '70%' : '30%'}
+                  y1="50%" y2={[12.5, 62.5, 87.5].includes(x) ? '70%' : '30%'}
                 />
               ))}
-              {/* Error path for COW_BONDING */}
               <line stroke="#ffb4ab" strokeDasharray="0" strokeWidth="2"
                 x1="50%" x2="50%" y1="50%" y2="30%" />
             </svg>
 
             {/* Stage nodes */}
-            {STAGES.map((stage, i) => {
-              const isDown = stage.pos === 'down'
-              const isError = stage.status === 'error'
-              const isSelected = selectedStage === stage.id
-              return (
-                <div
-                  key={stage.id}
-                  onClick={() => setSelectedStage(stage.id)}
-                  className={`relative z-10 flex flex-col items-center cursor-pointer group select-none
-                    ${isDown ? 'translate-y-14' : '-translate-y-14'}`}
-                >
-                  {isError && (
-                    <div className="absolute w-24 h-24 bg-error/20 rounded-full animate-ping z-0"
-                      style={{ top: '-16px', left: '-16px' }} />
-                  )}
-                  <div className={`w-16 h-16 flex items-center justify-center relative z-10 transition-all duration-200
-                    ${isError
-                      ? 'bg-surface border-2 border-error'
-                      : isSelected
-                        ? 'bg-surface border-2 border-primary-fixed'
-                        : 'bg-surface border border-outline-variant hover:border-primary-fixed-dim'
-                    }`}
+            <div role="list" aria-label="CoWoS-L production stages" className="contents">
+              {STAGES.map((stage) => {
+                const isDown = stage.pos === 'down'
+                const isError = stage.status === 'error'
+                const isSelected = selectedStage === stage.id
+                return (
+                  <button
+                    key={stage.id}
+                    type="button"
+                    role="listitem"
+                    aria-label={`${stage.label} — ${isError ? 'Error' : 'Nominal'}`}
+                    aria-pressed={isSelected}
+                    onClick={() => setSelectedStage(stage.id)}
+                    onKeyDown={(e) => handleStageKey(e, stage)}
+                    className={`relative z-10 flex flex-col items-center cursor-pointer group select-none bg-transparent border-0 p-0
+                      transition-transform duration-200 hover:scale-105
+                      ${isDown ? 'translate-y-14' : '-translate-y-14'}`}
                   >
-                    <span className={`material-symbols-outlined ${isError ? 'text-error' : 'text-primary-fixed-dim'}`}>
-                      {stage.icon}
-                    </span>
-                  </div>
-                  <div className={`mt-3 px-2 py-1 font-label-caps text-label-caps
-                    ${isError ? 'bg-error-container text-on-error-container' : 'bg-surface-variant text-on-surface'}`}
-                  >
-                    {stage.label}
-                  </div>
-                  <div className={`font-data-sm text-data-sm mt-1 ${isError ? 'text-error' : 'text-on-surface-variant'}`}>
-                    {isError ? `ERR-${stage.id}` : stage.id}
-                  </div>
-                </div>
-              )
-            })}
+                    {isError && (
+                      <div
+                        className="absolute w-24 h-24 bg-error/20 rounded-full animate-ping z-0"
+                        style={{ top: '-16px', left: '-16px' }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <div className={`w-16 h-16 flex items-center justify-center relative z-10 transition-all duration-200
+                      ${isError
+                        ? 'bg-surface border-2 border-error'
+                        : isSelected
+                          ? 'bg-surface border-2 border-primary-fixed'
+                          : 'bg-surface border border-outline-variant group-hover:border-primary-fixed-dim'
+                      }`}
+                    >
+                      <span className={`material-symbols-outlined ${isError ? 'text-error' : 'text-primary-fixed-dim'}`} aria-hidden="true">
+                        {stage.icon}
+                      </span>
+                    </div>
+                    <div className={`mt-3 px-2 py-1 font-label-caps text-label-caps
+                      ${isError ? 'bg-error-container text-on-error-container' : 'bg-surface-variant text-on-surface'}`}
+                    >
+                      {stage.label}
+                    </div>
+                    <div className={`font-data-sm text-data-sm mt-1 ${isError ? 'text-error' : 'text-on-surface-variant'}`}>
+                      {isError ? `ERR-${stage.id}` : stage.id}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Inline Diagnostic Terminal */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[600px] bg-glass border border-secondary p-6 font-data-display z-30">
+          <div
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[600px] bg-glass border border-secondary p-6 font-data-display z-30"
+            aria-live="polite"
+            aria-label={`Diagnostic terminal for stage ${selectedStage}`}
+          >
             <div className="flex justify-between items-center mb-4 border-b border-outline pb-2">
               <span className="text-secondary uppercase text-xs tracking-wider">
                 Diagnostic Terminal :: {selectedStage}
@@ -170,21 +196,23 @@ export default function TheLine() {
             </div>
             <div className="space-y-2 text-sm">
               {msgs.map((m, i) => <TerminalLine key={i} {...m} />)}
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2 mt-4" aria-hidden="true">
                 <span className="text-primary-fixed animate-pulse">_</span>
               </div>
             </div>
             {selected?.status === 'error' && (
               <div className="mt-4 flex gap-2 pt-4 border-t border-outline-variant">
                 <button
+                  type="button"
                   onClick={() => navigate('/defect')}
-                  className="flex-1 py-2 bg-error-container text-on-error-container font-data-sm text-data-sm uppercase hover:opacity-80 transition-opacity"
+                  className="flex-1 py-2 bg-error-container text-on-error-container font-data-sm text-data-sm uppercase hover:opacity-80 transition-opacity duration-200 cursor-pointer"
                 >
                   View Defect Analysis →
                 </button>
                 <button
+                  type="button"
                   onClick={() => navigate('/fix')}
-                  className="flex-1 py-2 bg-primary-container text-on-primary-container font-data-sm text-data-sm uppercase hover:opacity-80 transition-opacity"
+                  className="flex-1 py-2 bg-primary-container text-on-primary-container font-data-sm text-data-sm uppercase hover:opacity-80 transition-opacity duration-200 cursor-pointer"
                 >
                   View Fix Protocol →
                 </button>
