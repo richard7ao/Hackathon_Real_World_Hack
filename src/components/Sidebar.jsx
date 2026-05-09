@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 
 const NAV = [
-  { label: 'PIPELINE',   sub: 'fleet · 8-stage line', icon: 'precision_manufacturing', path: '/',       index: '01' },
+  { label: 'PIPELINE',   sub: 'fleet · 8-stage line', icon: 'precision_manufacturing', path: '/demo',   index: '01' },
   { label: 'DEFECT',     sub: 'analysis · A247293C3', icon: 'biotech',                 path: '/defect', index: '02' },
   { label: 'RESOLUTION', sub: 'fix · RPN 187 → 42',   icon: 'auto_fix_high',           path: '/fix',    index: '03' },
 ]
@@ -19,15 +19,15 @@ export default function Sidebar() {
   return (
     <aside className="w-72 shrink-0 border-r border-rule bg-bg/70 backdrop-blur flex flex-col h-full">
       <div className="px-6 pt-6 pb-5 border-b border-rule">
-        <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 grid place-items-center bg-cyan/10 hairline">
+        <NavLink to="/" className="flex items-center gap-3 group">
+          <div className="relative w-10 h-10 grid place-items-center bg-cyan/10 hairline group-hover:bg-cyan/20 transition-colors">
             <span className="font-mono text-cyan text-[18px] leading-none">◐</span>
           </div>
           <div className="leading-tight">
             <div className="font-display text-[20px] tracking-[-0.03em] leading-none">loopback</div>
             <div className="font-mono text-mono-xs text-text-muted mt-1.5">operator_01 · A42</div>
           </div>
-        </div>
+        </NavLink>
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin py-3" aria-label="Primary">
@@ -40,7 +40,7 @@ export default function Sidebar() {
             <li key={path}>
               <NavLink
                 to={path}
-                end={path === '/'}
+                end={path === '/demo'}
                 className={({ isActive }) =>
                   `group relative flex items-start gap-3 px-3 py-3 transition-all duration-200
                    ${isActive
