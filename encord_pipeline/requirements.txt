@@ -1,0 +1,10 @@
+encord>=0.1.150
+google-generativeai>=0.8.3
+pillow>=10.2.0
+pandas>=2.2.0
+numpy>=1.26.0
+requests>=2.31.0
+scikit-learn>=1.4.0
+torch>=2.2.0
+torchvision>=0.17.0
+python-dotenv>=1.0.1

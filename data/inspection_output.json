@@ -1,0 +1,118 @@
+{
+  "project_id": "66d359dc-24f7-4a05-86ae-0f4bb426e74e",
+  "project_title": "Wafer AI",
+  "total_label_rows": 100,
+  "status_breakdown": {
+    "Review Annotation": 100
+  },
+  "ontology": {
+    "objects": [],
+    "classifications": [],
+    "skeleton_templates": []
+  },
+  "ontology_summary": [],
+  "ontology_gate_ok": false,
+  "missing_pattern_values": [],
+  "sample_rows": [
+    {
+      "label_hash": null,
+      "data_title": "805199.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "808187.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "806048.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "765844.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "776169.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "774573.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "807462.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "805684.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "808399.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "807196.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "740416.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "764324.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "764888.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "809082.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "807352.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "762524.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "760560.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "764434.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "732235.jpg",
+      "status": "Review Annotation"
+    },
+    {
+      "label_hash": null,
+      "data_title": "806785.jpg",
+      "status": "Review Annotation"
+    }
+  ]
+}
