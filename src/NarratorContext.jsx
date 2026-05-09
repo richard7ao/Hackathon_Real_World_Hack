@@ -1,16 +1,15 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 const NarratorCtx = createContext(null)
 
 const DEFAULT_VOICE = 'pNInz6obpgDQGcFmaJgB' // Adam — calm, authoritative
 
 export function NarratorProvider({ children }) {
-  const [muted,    setMuted]    = useState(false)
   const [speaking, setSpeaking] = useState(false)
-  const audioRef   = useRef(null)
-  const abortRef   = useRef(null)
-  // Sync ref so the async speak() closure can read muted without needing it as a dep
-  const mutedRef   = useRef(false)
+  const audioRef      = useRef(null)
+  const abortRef      = useRef(null)
+  const pendingRef    = useRef(null)  // last text attempted — replayed on button click
+  const speakRef      = useRef(null)  // forward ref so listeners can call speak without deps
 
   function stopAudio() {
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null }
@@ -19,9 +18,9 @@ export function NarratorProvider({ children }) {
   }
 
   const speak = useCallback(async (text) => {
-    if (mutedRef.current || !text) return
-
+    if (!text) return
     stopAudio()
+    pendingRef.current = text
 
     const apiKey  = import.meta.env.VITE_ELEVENLABS_API_KEY
     const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || DEFAULT_VOICE
@@ -73,20 +72,39 @@ export function NarratorProvider({ children }) {
     } catch (err) {
       if (err.name !== 'AbortError') console.warn('[Narrator]', err.message)
       setSpeaking(false)
+      // pendingRef is kept so the button can retry
     }
-  }, []) // stable — reads mutedRef, not muted state
-
-  const toggleMuted = useCallback(() => {
-    setMuted(prev => {
-      const next = !prev
-      mutedRef.current = next
-      if (next) stopAudio()
-      return next
-    })
   }, [])
 
+  speakRef.current = speak
+
+  // Replay pending narration on the very first user interaction anywhere on the page.
+  // Browsers block audio.play() until a gesture has occurred — this catches that case.
+  useEffect(() => {
+    function onFirstInteraction() {
+      if (pendingRef.current) speakRef.current(pendingRef.current)
+      document.removeEventListener('click',   onFirstInteraction)
+      document.removeEventListener('keydown', onFirstInteraction)
+    }
+    document.addEventListener('click',   onFirstInteraction)
+    document.addEventListener('keydown', onFirstInteraction)
+    return () => {
+      document.removeEventListener('click',   onFirstInteraction)
+      document.removeEventListener('keydown', onFirstInteraction)
+    }
+  }, [])
+
+  // Button handler: speaking → stop; idle → replay last narration
+  const toggle = useCallback(() => {
+    if (speaking) {
+      stopAudio()
+    } else if (pendingRef.current) {
+      speak(pendingRef.current)
+    }
+  }, [speaking, speak])
+
   return (
-    <NarratorCtx.Provider value={{ speak, stop: stopAudio, muted, toggleMuted, speaking }}>
+    <NarratorCtx.Provider value={{ speak, stop: stopAudio, toggle, speaking }}>
       {children}
     </NarratorCtx.Provider>
   )
