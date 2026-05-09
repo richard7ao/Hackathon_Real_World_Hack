@@ -20,7 +20,7 @@ export const NARRATION = {
     '67,000 unfilled US semiconductor jobs by 2030. There are not enough seniors.',
 
   landing_solution:
-    'Loopback is the autonomous AI process engineer. ' +
+    'CoWoS is the autonomous AI process engineer. ' +
     'It reads wafer maps natively, grades defects against IPC-A-610 Class 3, ' +
     'scores failure modes with FMECA, and hands engineers a corrective protocol — not just an alert. ' +
     "That's Hugo.",

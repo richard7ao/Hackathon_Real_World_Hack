@@ -297,7 +297,7 @@ export default function Landing() {
             <span className="w-7 h-7 grid place-items-center bg-cyan/15 hairline">
               <span className="font-mono text-cyan text-[14px]">◐</span>
             </span>
-            <span className="font-display text-[20px] tracking-[-0.03em]">loopback</span>
+            <span className="font-display text-[20px] tracking-[-0.03em]">cowos</span>
             <span className="font-mono text-mono-xs text-text-muted hidden sm:inline">/ pitch · 2026.05.10</span>
           </Link>
           <div className="hidden md:flex items-center gap-6 font-mono text-mono-xs uppercase tracking-[0.18em] text-text-dim">
@@ -565,7 +565,7 @@ export default function Landing() {
       </Section>
 
       {/* SOLUTION */}
-      <Section id="solution" num="05" eyebrow="SOLUTION / LOOPBACK" tone="paper">
+      <Section id="solution" num="05" eyebrow="SOLUTION / COWOS" tone="paper">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-end mb-16">
           <h2 className="md:col-span-8 font-display text-h-lg leading-[0.92] tracking-[-0.04em] text-balance">
             The autonomous AI <span className="italic text-cyan">process engineer</span>
@@ -619,7 +619,7 @@ export default function Landing() {
           </div>
 
           <h2 className="font-display text-[64px] md:text-[112px] leading-[0.9] tracking-[-0.05em] text-balance">
-            See loopback<br />
+            See cowos<br />
             <span className="italic text-cyan">on a real line</span>.
           </h2>
 
@@ -699,11 +699,11 @@ export default function Landing() {
           </div>
 
           <div className="pt-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-mono text-mono-xs text-bg/50">
-            <div>loopback · the autonomous AI process engineer · 2026</div>
+            <div>cowos · the autonomous AI process engineer · 2026</div>
             <div className="flex gap-6">
               <a href="#problem" className="hover:text-cyan">Top</a>
               <Link to="/demo" className="hover:text-cyan">Demo</Link>
-              <a href="mailto:hello@loopback.ai" className="hover:text-cyan">hello@loopback.ai</a>
+              <a href="mailto:hello@cowos.ai" className="hover:text-cyan">hello@cowos.ai</a>
             </div>
           </div>
         </div>

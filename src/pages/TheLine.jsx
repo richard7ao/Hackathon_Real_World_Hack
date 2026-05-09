@@ -402,7 +402,7 @@ export default function TheLine() {
             </div>
 
             <div className="mt-16 font-mono text-mono-xs text-text-muted leading-[1.4] select-none whitespace-pre overflow-hidden opacity-70">
-{`▓▓░░  loopback · cowos-l · operator_01  ░░▓▓ ─── streaming ${(fleetYield * 1.4 | 0).toLocaleString()} events/s · region tpe-n3 · build 2.4.1
+{`▓▓░░  cowos · cowos-l · operator_01  ░░▓▓ ─── streaming ${(fleetYield * 1.4 | 0).toLocaleString()} events/s · region tpe-n3 · build 2.4.1
 ░░▓▓  ─────────────────────────────────────────────────────────────────────  ▓▓░░`}
             </div>
 

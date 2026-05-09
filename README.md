@@ -1,4 +1,4 @@
-# Loopback
+# CoWoS
 
 Three processes wired together:
 
@@ -30,7 +30,7 @@ backends running, but for the real demo you want all three.
 npm install
 npm run dev
 
-# Terminal 2 — Loopback API (FMECA, correlation, fix-and-verify, PDF)
+# Terminal 2 — CoWoS API (FMECA, correlation, fix-and-verify, PDF)
 source .venv/bin/activate
 uvicorn loopback_api.main:app --port 8000 --reload
 

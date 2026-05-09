@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const SEQUENCE = [
-  { delay: 200,  type: 'cmd',   text: 'LOOPBACK DIAGNOSTIC SYSTEM v2.4.1' },
+  { delay: 200,  type: 'cmd',   text: 'COWOS DIAGNOSTIC SYSTEM v2.4.1' },
   { delay: 500,  type: 'cmd',   text: 'Scanning all 8 CoWoS-L stages...' },
   { delay: 900,  type: 'ok',    text: 'STG-01 WAFER_IN ............. NOMINAL  (98.1%)' },
   { delay: 1200, type: 'ok',    text: 'STG-02 BUMPING .............. NOMINAL  (97.4%)' },

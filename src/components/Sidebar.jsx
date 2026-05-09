@@ -24,7 +24,7 @@ export default function Sidebar() {
             <span className="font-mono text-cyan text-[18px] leading-none">◐</span>
           </div>
           <div className="leading-tight">
-            <div className="font-display text-[20px] tracking-[-0.03em] leading-none">loopback</div>
+            <div className="font-display text-[20px] tracking-[-0.03em] leading-none">cowos</div>
             <div className="font-mono text-mono-xs text-text-muted mt-1.5">operator_01 · A42</div>
           </div>
         </NavLink>
