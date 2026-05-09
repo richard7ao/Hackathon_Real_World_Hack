@@ -198,10 +198,10 @@ The pitch pack ([`Engineer_notes.md`](Engineer_notes.md)) carries the full prima
 
 | | |
 |---|---|
-| **Richard Lao**       | Co-founder · CEO    |
-| **Gaurav**            | Co-founder · Engineering |
-| **Harper**            | Co-founder · Standards & GTM |
-| **Vikkash**           | Co-founder · ML & Perception |
+| **Richard**           | Co-founder  |
+| **Gaurav**            | Co-founder  |
+| **Harper**            | Co-founder  |
+| **Vikkash**           | Co-founder  |
 
 Built in a weekend at the AI for the Real World Hack, May 2026.
 
