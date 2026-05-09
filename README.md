@@ -10,6 +10,8 @@
 
 </div>
 
+<img width="1793" height="951" alt="Screenshot 2026-05-10 at 00 28 39" src="https://github.com/user-attachments/assets/f1d3dff3-e919-4d63-bfc2-0b28da3ed0bb" />
+
 ---
 
 ## Why this exists
