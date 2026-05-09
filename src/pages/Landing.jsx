@@ -424,7 +424,7 @@ export default function Landing() {
               <span className="tick-tr" /><span className="tick-bl" />
               <div className="font-mono text-eyebrow text-text-muted mb-3">REFERENCE · PITCH PACK</div>
               <div className="font-display text-h-sm tracking-[-0.025em] mb-2">
-                Saturday, 10 May 2025 · NEA HQ
+                Saturday, 9 May 2026 · NEA HQ
               </div>
               <div className="font-mono text-mono-xs text-text-muted leading-relaxed">
                 Every figure on this page is grep-able to a primary source.
