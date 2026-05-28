@@ -1,0 +1,46 @@
+I just won the "AI for the Real World Hack" 🏆
+
+Hosted by Operators & Friends with NEA and Transition. Powered by OpenAI, Google DeepMind, ElevenLabs, Encord and Lovable.
+
+Here's the pitch.
+
+The problem. The AI revolution is bottlenecked by chip packaging. Not compute. Not data. Packaging. The physical layer that stacks silicon into the chips that train every frontier model: HBM, CoWoS, advanced substrates. Nvidia's CoWoS allocation at TSMC has a 12 to 18 month waitlist. The future of AI is gated by a queue.
+
+"It is not the shortage of AI chips. It is the shortage of our CoWoS capacity." Mark Liu, TSMC Chairman.
+
+The catastrophe inside the queue. Roughly 1 in 5 Blackwell packages get scrapped during the current ramp (Epoch AI). Each carries about $4,300 of integrated silicon: two compute chiplets and eight HBM3E stacks, none of it recoverable. When a defect pattern emerges, a process engineer hunts the root cause manually. Days for a routine excursion. Weeks for a hard one. Months when it crosses departments. KLA puts a single inline-undetected excursion at ~$21M in remanufacturing. The line keeps running while the engineer thinks. Around $100B of yield loss every year, industry wide.
+
+Why now. Detecting defects is solved. Diagnosing why, and fixing autonomously, is not. Foundation models are finally good enough to reason over multimodal process data and act on it.
+
+What we built. CoWoS: the AI that autonomously detects defects on semiconductor packaging lines, diagnoses why the factory created them, and fixes the process. A multi week, multi million dollar loop, closed in minutes.
+
+How it works.
+
+Act 1. See it. CV detects defects in real time. Type, location, severity, confidence.
+
+Act 2. Understand it. The AI correlates patterns across batches. Not "this package is bad," but "these 40 packages share the same void signature. All from machine 3, shift 2, Tuesday 14:00 to 16:00."
+
+Act 3. Fix it. "Reduce reflow zone 3 by 3°C, increase paste viscosity 5%. Estimated defect rate: 23% to 4%." Then it watches the next batch to verify. Closed loop. No human in the chain.
+
+Why this is frontier, not a CV wrapper.
+
+It makes a consequential physical-world decision.
+It closes the loop. Acts, then verifies.
+It replaces the most expensive and scarcest person in the fab.
+It gets smarter every batch.
+
+This isn't a dashboard. It doesn't send alerts. It doesn't ask permission. It acts.
+
+This is what I came here to do. Build AI that moves the physical world. Build the system that unblocks the chips that unblock the future.
+
+Couldn't have done it without my cracked teammates Gaurav, Harper and Vikkash. You three were unreal.
+
+Massive thanks to the Encord team for the track and the toolkit that made the perception layer real. To David Pacák and the Transition team for the energy. To Michelangelo Pagliara and Juhana Peltomaa at Operators & Friends for hosting. To Elie de Fressenel at NEA for backing it.
+
+The manifesto: AI can finally move atoms, not just pixels.
+
+This is the work. More of this. 🚀
+
+TL;DR: Won the AI for the Real World Hack with CoWoS, an autonomous AI that detects, diagnoses and fixes defects on semiconductor packaging lines. Collapses a multi week, multi million dollar loop into one that closes itself. Built in a weekend with Gaurav, Harper and Vikkash.
+
+#AI #Hackathon #Semiconductors #RealWorldAI #Encord
